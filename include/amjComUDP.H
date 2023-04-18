@@ -17,6 +17,7 @@ public:
   virtual int receive(amjPacket &);
 private:
   struct sockaddr_in myaddr;
+  bool one_peer;
   struct sockaddr_in peeraddr;
   int sockfd;
   std::vector<char> buffer;

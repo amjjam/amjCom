@@ -6,7 +6,8 @@ amjComEndpointUDP::amjComEndpointUDP(std::string me, std::string peer){
   buffer.resize(MAX_DGRAM);
   myaddr=make_sockaddr_in(me);
   peeraddr=make_sockaddr_in(peer);
-
+  one_peer=(peer.size()>0);
+  
   if((sockfd=socket(AF_INET,SOCK_DGRAM,0))<0){
     perror("socket creation failed");
     exit(EXIT_FAILURE);
@@ -28,10 +29,11 @@ int amjComEndpointUDP::receive(amjPacket &p){
   socklen_t len;
   int n=recvfrom(sockfd,buffer.data(),MAX_DGRAM,MSG_WAITALL,
 		 (struct sockaddr *)&senderaddr,&len);
-  if(!compare_sockaddr_in(senderaddr,peeraddr)){
-    perror("datagram not from peer");
-    exit(EXIT_FAILURE);
-  }
+  if(one_peer)
+    if(!compare_sockaddr_in(senderaddr,peeraddr)){
+      perror("datagram not from peer");
+      exit(EXIT_FAILURE);
+    }
   p.resize(n);
   memcpy(p._data(),buffer.data(),n);
   return 0;
