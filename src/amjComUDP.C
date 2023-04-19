@@ -26,9 +26,14 @@ int amjComEndpointUDP::send(amjPacket &p){
 
 int amjComEndpointUDP::receive(amjPacket &p){
   struct sockaddr_in senderaddr;
-  socklen_t len;
-  int n=recvfrom(sockfd,buffer.data(),MAX_DGRAM,MSG_WAITALL,
-		 (struct sockaddr *)&senderaddr,&len);
+  socklen_t len=sizeof(sockaddr_in);
+  int n;
+  if((n=recvfrom(sockfd,buffer.data(),MAX_DGRAM,MSG_WAITALL,
+		 (struct sockaddr *)&senderaddr,&len))<0){
+    perror("error receiving packet");
+    exit(EXIT_FAILURE);
+  }
+  
   if(one_peer)
     if(!compare_sockaddr_in(senderaddr,peeraddr)){
       perror("datagram not from peer");
