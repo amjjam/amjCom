@@ -5,7 +5,7 @@
 
 class amjPacket{
 public:
-  amjPacket(){};
+  amjPacket(int n=0):_d(n){};
   virtual ~amjPacket(){};
   void resize(int n){_d.resize(n);}
   int size() const {return _d.size();}
