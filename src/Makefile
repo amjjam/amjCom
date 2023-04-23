@@ -12,17 +12,20 @@ libamjCom.so: $(AMJCOM_OBJ)
 	$(CPP) -shared -Wl,-soname,$@ -o $@ $^
 
 install: libamjCom.so ../include/amjCom.H ../include/amjComUDP.H ../include/amjPacket.H
-	mkdir -p /opt/amj/lib
-	mkdir -p /opt/amj/include
-	cp libamjCom.so /opt/amj/lib
+	mkdir -p /opt/amjCom/lib
+	mkdir -p /opt/amjCom/include
+	cp libamjCom.so /opt/amjCom/lib
 	cp ../include/amjCom.H ../include/amjComUDP.H ../include/amjPacket.H \
-	/opt/amj/include
+	/opt/amjCom/include
 
 uninstall:
-	- rm /opt/amj/lib/libamjCom.so
-	- rm /opt/amj/include/amjCom.H
-	- rm /opt/amj/include/amjComUDP.H
-	- rm /opt/amj/include/amjPacket.H
+	- rm /opt/amjCom/lib/libamjCom.so
+	- rm /opt/amjCom/include/amjCom.H
+	- rm /opt/amjCom/include/amjComUDP.H
+	- rm /opt/amjCom/include/amjPacket.H
+	- rmdir /opt/amjCom/lib
+	- rmdir /opt/amjCom/include
+	- rmdir /opt/amjCom
 
 clean:
 	- rm libamjCom.so $(AMJCOM_OBJ)
