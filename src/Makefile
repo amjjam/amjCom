@@ -1,7 +1,7 @@
 FLAGS=-Wall -g -fPIC
 CPPFLAGS=$(FLAGS)
 
-AMJCOM_SRC=amjCom.C amjComUDP.C
+AMJCOM_SRC=amjCom.C amjComUDP.C amjPacket.C
 AMJCOM_OBJ=$(AMJCOM_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
@@ -11,18 +11,19 @@ all: libamjCom.so
 libamjCom.so: $(AMJCOM_OBJ)
 	$(CPP) -shared -Wl,-soname,$@ -o $@ $^
 
-install: libamjCom.so ../include/amjCom.H ../include/amjComUDP.H ../include/amjPacket.H
+install: libamjCom.so ../include/amjCom.H ../include/amjComUDP.H ../include/amjPacket.H ../include/amjPacketRW.H
 	mkdir -p /opt/amjCom/lib
 	mkdir -p /opt/amjCom/include
 	cp libamjCom.so /opt/amjCom/lib
 	cp ../include/amjCom.H ../include/amjComUDP.H ../include/amjPacket.H \
-	/opt/amjCom/include
+	../include/amjPacketRW.H /opt/amjCom/include
 
 uninstall:
 	- rm /opt/amjCom/lib/libamjCom.so
 	- rm /opt/amjCom/include/amjCom.H
 	- rm /opt/amjCom/include/amjComUDP.H
 	- rm /opt/amjCom/include/amjPacket.H
+	- rm /opt/amjCom/include/amjPacketRW.H
 	- rmdir /opt/amjCom/lib
 	- rmdir /opt/amjCom/include
 	- rmdir /opt/amjCom
