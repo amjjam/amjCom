@@ -13,6 +13,17 @@ int amjPacket::seek(unsigned int o){
   return offset;
 }
 
+amjPacket &amjPacket::operator<<(const amjPacketRW &d){
+  d.write(*this);
+  return *this;
+}
+
+amjPacket &amjPacket::operator>>(amjPacketRW &d){
+  d.read(*this);
+  return *this;
+}
+
+
 amjPacket &amjPacket::operator<<(int i){
   push(&i,sizeof(int));
   return *this;
@@ -41,6 +52,22 @@ amjPacket &amjPacket::operator<<(double d){
 
 amjPacket &amjPacket::operator>>(double &d){
   pop(&d,sizeof(double));
+  return *this;
+}
+
+amjPacket &amjPacket::operator<<(std::complex<float> c){
+  float real=c.real(),imag=c.imag();
+  push(&real,sizeof(float));
+  push(&imag,sizeof(float));
+  return *this;
+}
+
+amjPacket &amjPacket::operator>>(std::complex<float> &c){
+  float real,imag;
+  pop(&real,sizeof(float));
+  pop(&imag,sizeof(float));
+  c.real(real);
+  c.imag(imag);
   return *this;
 }
 
@@ -86,6 +113,21 @@ amjPacket &amjPacket::operator>>(std::vector<float> &f){
   pop(&n,sizeof(int));
   f.resize(n);
   pop(f.data(),n*sizeof(float));
+  return *this;
+}
+
+amjPacket &amjPacket::operator<<(const std::vector<double> &d){
+  int n=d.size();
+  push(&n,sizeof(int));
+  push(d.data(),n*sizeof(double));
+  return *this;
+}
+
+amjPacket &amjPacket::operator>>(std::vector<double> &d){
+  int n;
+  pop(&n,sizeof(int));
+  d.resize(n);
+  pop(d.data(),n*sizeof(double));
   return *this;
 }
 
