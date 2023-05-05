@@ -6,6 +6,8 @@
 #include <string>
 #include <complex>
 
+#include "amjPacketRW.H"
+
 class amjPacket{
 public:
   amjPacket(unsigned int n=0, unsigned int o=0);
@@ -14,29 +16,33 @@ public:
   void clear(){_d.clear(); offset=0;}
   int seek(unsigned int o=0);
   int reset(){return seek(0);};
+  int start(){return seek(0);};
   void reserve(int n){_d.reserve(n);}
   int size() const {return _d.size();}
   std::vector<char> &data(){return _d;}
   char *raw(){return _d.data();}
   char *_data(){return _d.data();}
   const char *_data() const {return _d.data();}
+  amjPacket &operator<<(const amjPacketRW &);
+  amjPacket &operator>>(amjPacketRW &);
   amjPacket &operator<<(int);
   amjPacket &operator>>(int &);
   amjPacket &operator<<(float);
   amjPacket &operator>>(float &);
   amjPacket &operator<<(double);
   amjPacket &operator>>(double &);
+  amjPacket &operator<<(std::complex<float>);
+  amjPacket &operator>>(std::complex<float> &);
   amjPacket &operator<<(const std::string &);
   amjPacket &operator>>(std::string &);
   amjPacket &operator<<(const std::vector<int> &);
   amjPacket &operator>>(std::vector<int> &);
   amjPacket &operator<<(const std::vector<float> &);
   amjPacket &operator>>(std::vector<float> &);
+  amjPacket &operator<<(const std::vector<double> &);
+  amjPacket &operator>>(std::vector<double> &);
   amjPacket &operator<<(const std::vector<std::complex<float> > &);
   amjPacket &operator>>(std::vector<std::complex<float> > &);
-  // amjPacket &operator<<(std::vector<float> &);
-  // amjPacket &operator<<(std::vector<double> &);
-  // amjPacket &operator<<(std::vector<string> &);
 private:
   std::vector<char> _d;
   unsigned int offset;
