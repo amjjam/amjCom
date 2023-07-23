@@ -5,7 +5,5 @@ std::string split1(std::string &s){
 }
 
 std::string split2(std::string &s){
-  return s.substr(s.find_last_of(':')+1);
+  return s.substr(s.find_first_of(':')+1);
 }
-
-
