@@ -14,8 +14,8 @@ public:
 private:
 };
 
-std::string split1(std::string &);
-std::string split2(std::string &);
+std::string split1(std::string);
+std::string split2(std::string);
 
 #endif /* _AMJCOM_H_ */
 
