@@ -43,6 +43,8 @@ public:
   amjPacket &operator>>(std::vector<double> &);
   amjPacket &operator<<(const std::vector<std::complex<float> > &);
   amjPacket &operator>>(std::vector<std::complex<float> > &);
+  amjPacket &operator<<(const std::vector<std::string> &);
+  amjPacket &operator>>(std::vector<std::string> &);
 private:
   std::vector<char> _d;
   unsigned int offset;

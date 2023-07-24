@@ -158,6 +158,29 @@ amjPacket &amjPacket::operator>>(std::vector<std::complex<float> > &c){
   return *this;
 }
 
+amjPacket &amjPacket::operator<<(const std::vector<std::string> &s){
+  int n=s.size(),m;
+  push(&n,sizeof(int));
+  for(unsigned int i=0;i<s.size();i++){
+    m=s[i].size();
+    push(&m,sizeof(int));
+    push(s[i].data(),s[i].size());
+  }
+  return *this;
+}
+
+amjPacket &amjPacket::operator>>(std::vector<std::string> &s){
+  int n,m;
+  pop(&n,sizeof(int));
+  s.resize(n);
+  for(unsigned int i=0;i<s.size();i++){
+    pop(&m,sizeof(int));
+    s[i].resize(m);
+    pop(s[i].data(),m);
+  }
+  return *this;
+}
+
 void amjPacket::bound(){
   offset=offset<0?0:offset;
   offset=offset<_d.size()?offset:_d.size();
