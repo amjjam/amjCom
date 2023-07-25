@@ -23,9 +23,9 @@ std::string qsend;
 std::string qreceive;
 
 int main(int argc, char *argv[]){
-  parse_args(argc,char *argv[]);
+  parse_args(argc,argv);
 
-  amjComEndpointMQ(qsend,qreceive);
+  amjComEndpointMQ e(qsend,qreceive);
   amjPacket p;
 
   if(rtsf){ // I am a receiver

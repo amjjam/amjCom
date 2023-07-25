@@ -7,7 +7,10 @@ UDPTEST_OBJ=$(UDPTEST_SRC:.C=.o)
 UDPTEST2_SRC=udptest2.C ../../src/amjComUDP.C ../../src/amjCom.C ../../src/amjPacket.C
 UDPTEST2_OBJ=$(UDPTEST2_SRC:.C=.o)
 
-all: udptest udptest2
+MQTEST_SRC=mqtest.C ../../src/amjComMQ.C ../../src/amjCom.C ../../src/amjPacket.C
+MQTEST_OBJ=$(MQTEST_SRC:.C=.o)
+
+all: udptest udptest2 mqtest
 
 udptest: $(UDPTEST_OBJ)
 	$(CPP) -o $@ $^
@@ -15,5 +18,9 @@ udptest: $(UDPTEST_OBJ)
 udptest2: $(UDPTEST2_OBJ)
 	$(CPP) -o $@ $^
 
+mqtest: $(MQTEST_OBJ)
+	$(CPP) -o $@ $^ -lrt
+
 clean:
-	- rm $(UDPTEST_OBJ) $(UDPTEST2_OBJ) udptest udptest2
+	- rm $(UDPTEST_OBJ) $(UDPTEST2_OBJ) $(MQTEST_OBJ)\
+	udptest udptest2 mqtest

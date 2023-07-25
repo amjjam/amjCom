@@ -24,13 +24,12 @@ public:
   virtual ~amjComEndpointMQ();
   virtual int send(amjPacket &);
   virtual int receive(amjPacket &);
-  void init(std::string,int);
 private:
   int _sendsize;
   int _receivesize;
   mqd_t qsend;
   mqd_t qreceive;
-  void initialize(std::string,int);
+  void init(std::string,int,mqd_t *,int *);
 };
 
 #endif /* _AMJCOMMQ_H_ */
