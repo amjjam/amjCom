@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-amjComEndpointMQ::amjComEndpointMQ(std::string send, std::string receive){
+amjComEndpointMQ::amjComEndpointMQ(std::string receive, std::string send){
   qsend=qreceive=-1;
   init(send,SEND,&qsend,&_sendsize);
   init(receive,RECEIVE,&qreceive,&_receivesize);
