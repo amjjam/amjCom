@@ -41,6 +41,7 @@ int amjComEndpointUDP::receive(amjPacket &p){
     }
   p.resize(n);
   memcpy(p._data(),buffer.data(),n);
+  p.reset();
   return 0;
 }
 
