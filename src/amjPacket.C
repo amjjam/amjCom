@@ -1,5 +1,7 @@
 #include "../include/amjPacket.H"
 
+#include <iostream>
+
 amjPacket::amjPacket(unsigned int n, unsigned int o):_d(n),offset(o){bound();};
 
 void amjPacket::resize(int n){
@@ -11,6 +13,25 @@ int amjPacket::seek(unsigned int o){
   offset=o;
   bound();
   return offset;
+}
+
+uint8_t *amjPacket::write(int size){
+  _d.resize(offset+size);
+  int t=offset;
+  offset+=size;
+  return (uint8_t *)&_d[t];
+}
+
+uint8_t *amjPacket::read(int size){
+  if(offset+size>_d.size()){
+    std::cout << "amjPacket::read: attempt to read beyond packet end: "
+      "packet size=" << _d.size() << ", offset=" << offset << ", read size="
+	      << size << std::endl;
+    abort();
+  }
+  int t=offset;
+  offset+=size;
+  return (uint8_t *)&_d[t];
 }
 
 amjPacket &amjPacket::operator<<(const amjPacketRW &d){

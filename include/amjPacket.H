@@ -23,6 +23,8 @@ public:
   char *raw(){return _d.data();}
   char *_data(){return _d.data();}
   const char *_data() const {return _d.data();}
+  uint8_t *write(int size);
+  uint8_t *read(int size);
   amjPacket &operator<<(const amjPacketRW &);
   amjPacket &operator>>(amjPacketRW &);
   amjPacket &operator<<(int);
