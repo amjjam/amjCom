@@ -6,7 +6,7 @@ AMJCOM_OBJ=$(AMJCOM_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
 
-prefix=/opt/amjCom/
+prefix=/opt/amj
 
 all: libamjCom.so
 
@@ -16,18 +16,20 @@ libamjCom.so: $(AMJCOM_OBJ)
 install: libamjCom.so ../include/amjCom.H ../include/amjComUDP.H ../include/amjComMQ.H ../include/amjPacket.H ../include/amjPacketRW.H
 	mkdir -p $(prefix)/lib
 	mkdir -p $(prefix)/include
+	mkdir -p $(prefix)/include/amjCom
 	cp libamjCom.so $(prefix)/lib
 	cp ../include/amjCom.H ../include/amjComUDP.H ../include/amjComMQ.H \
-	../include/amjPacket.H ../include/amjPacketRW.H $(prefix)/include
+	../include/amjPacket.H ../include/amjPacketRW.H $(prefix)/include/amjCom
 
 uninstall:
 	- rm $(prefix)/lib/libamjCom.so
-	- rm $(prefix)/include/amjCom.H
-	- rm $(prefix)/include/amjComUDP.H
-	- rm $(prefix)/include/amjComMQ.H
-	- rm $(prefix)/include/amjPacket.H
-	- rm $(prefix)/include/amjPacketRW.H
+	- rm $(prefix)/include/amjCom/amjCom.H
+	- rm $(prefix)/include/amjCom/amjComUDP.H
+	- rm $(prefix)/include/amjCom/amjComMQ.H
+	- rm $(prefix)/include/amjCom/amjPacket.H
+	- rm $(prefix)/include/amjCom/amjPacketRW.H
 	- rmdir $(prefix)/lib
+	- rmdir $(prefix)/include/amjCom
 	- rmdir $(prefix)/include
 	- rmdir $(prefix)
 
