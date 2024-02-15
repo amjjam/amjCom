@@ -6,7 +6,9 @@ AMJCOM_OBJ=$(AMJCOM_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
 
-prefix=/opt/amj
+ifndef prefix
+  prefix=/opt/amj
+endif
 
 all: libamjCom.so
 
