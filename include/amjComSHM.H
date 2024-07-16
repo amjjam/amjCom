@@ -3,9 +3,10 @@
 
 #include <string>
 
-#include "amjPacket.H"
-
-
+#include "amjCom.H"
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <semaphore.h>
 
 /*=============================================================================
   For each of sending and receiving:
@@ -39,8 +40,8 @@
   ============================================================================*/
 class amjComEndpointSHM: amjComEndpoint{
 public:
-  amjComEndpointSHM(std::string,std::string){};
-  virtual ~amjComEndpointSHM(){};
+  amjComEndpointSHM(std::string,std::string);
+  virtual ~amjComEndpointSHM();
   virtual int send(amjPacket &);
   virtual int receive(amjPacket &);
 private:
@@ -52,7 +53,7 @@ private:
   sem_t *recv_sem;
   int recv_nbuf;
   int recv_size;
-  void create_shm_sem(std::string s, uint8_t &*shm, sem_t &*sem,
+  void create_shm_sem(std::string s, uint8_t **shm, sem_t **sem,
 		      int &nbuf, int &size);
 };
 
