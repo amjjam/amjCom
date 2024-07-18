@@ -55,5 +55,8 @@ private:
   int pop(void *, unsigned int);
 };
 
+int memcpy(amjPacket &,const void *);
+int memcpy(void *,const amjPacket &);
+	   
 #endif /* _AMJPACKET_H_ */
 

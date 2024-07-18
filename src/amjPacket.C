@@ -222,3 +222,26 @@ int amjPacket::pop(void *s, unsigned int n){
   offset+=n;
   return n;
 }
+
+
+// First sizeof(int) bytes of dest is int size
+// Return value is number of bytes read
+int memcpy(amjPacket &p, const void *src){
+  int size;
+  p.start();
+  memcpy(&size,src,sizeof(int));
+  memcpy(p.write(size),(uint8_t *)src+sizeof(int),size);
+  //p.resize(size);
+  //p.start();
+  //memcpy(p._data(),(uint8_t *)src+sizeof(int),size);
+  return size+sizeof(int);
+}
+
+// Writes packets size as int in sizeof(int) first bytes.
+// Return value is number of bytes written
+int memcpy(void *dest, const amjPacket &p){
+  int size=p.size();
+  memcpy(dest,&size,sizeof(int));
+  memcpy((uint8_t *)dest+sizeof(int),p._data(),size);
+  return size+sizeof(int);
+}
