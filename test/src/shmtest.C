@@ -14,37 +14,43 @@
      nbuf is the number of buffers
 
   -t time is the number of millisecond between generated packets on
-     the sender side. It is ignored on the receiver side.
+     the sender side. One the receiver side it is the number of
+     milliseconds between output. Output is number of packets in the
+     interval and average time between packets.
   ============================================================================*/
 
 #include "../../include/amjComSHM.H"
 #include <cstring>
+#include <iostream>
+#include <unistd.h>
 
 void parse_args(int argc,char *argv[]);
 
 bool send=false,recv=false;
 std::string send_desc,recv_desc;
 
-amjComEndpointSHM *c;
 amjPacket p;
+
+useconds_t t=1000;
 
 int main(int argc, char *argv[]){
   parse_args(argc,argv);
 
   if(send){
-    c=new amjComEndpointSHM(send_desc,"");
+    amjComEndpointSHM c(send_desc,"");
     for(int i=0;;i++){
       p.clear();
       memcpy(p.write(sizeof(int)),&i,sizeof(int));
       c.send(p);
+      usleep(t);
     }
   }
   else if(recv){
     int j;
-    c=new amjComEndpointSHM("",recv_desc);
+    amjComEndpointSHM c("",recv_desc);
     for(int i=0;;i++){
-      c.recv(p);
-      memcpy(&i,p.read(sizeof(int)),sizeof(int));
+      c.receive(p);
+      memcpy(&j,p.read(sizeof(int)),sizeof(int));
       std::cout << i << " " << j << std::endl;
     }
   }
@@ -55,8 +61,10 @@ int main(int argc, char *argv[]){
 
 void parse_args(int argc, char *argv[]){
 
-  for(int i=0;i<argc;i++)
-    if(send=(strcmp(argv[i],"-s")==0)||recv=(strcmp(argv[i],"-r")==0)){
+  for(int i=1;i<argc;i++)
+    if(strcmp(argv[i],"-s")==0||strcmp(argv[i],"-r")==0){
+      send=strcmp(argv[i],"-s")==0;
+      recv=strcmp(argv[i],"-r")==0;
       std::string desc;
       i++;
       desc+=argv[i];
@@ -66,11 +74,18 @@ void parse_args(int argc, char *argv[]){
       desc+=':';
       i++;
       desc+=argv[i];
-      if(sender)
+      if(send)
 	send_desc=desc;
-      else if(receiver)
+      else if(recv)
 	recv_desc=desc;
     }
-  
+    else if(strcmp(argv[i],"-t")==0){
+      i++;
+      t=atoi(argv[i])*1000;
+    }
+    else{
+      std::cout << "error: unknown parameter: " << argv[i] << std::endl;
+      abort();
+    }
 }
 
