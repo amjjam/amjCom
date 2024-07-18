@@ -45,16 +45,23 @@ public:
   virtual int send(amjPacket &);
   virtual int receive(amjPacket &);
 private:
-  uint8_t *send_shm;
-  sem_t *send_sem;
-  int send_nbuf;
-  int send_size;
-  uint8_t *recv_shm;
-  sem_t *recv_sem;
-  int recv_nbuf;
-  int recv_size;
-  void create_shm_sem(std::string s, uint8_t **shm, sem_t **sem,
-		      int &nbuf, int &size);
+  struct shm{
+    unsigned int sidx;
+    unsigned int ridx;
+    uint8_t **d;
+    unsigned int nbuf;
+    unsigned int size;
+  } *sshm, *rshm;
+  //uint8_t *send_shm;
+  sem_t *ssem;
+  //int send_nbuf;
+  //int send_size;
+  //uint8_t *rshm;
+  sem_t *rsem;
+  //int recv_nbuf;
+  //int recv_size;
+  void create_shm_sem(std::string s, struct shm **shm, sem_t **sem,
+		      bool init);
 };
 
 #endif /* _AMJCOMSHM_H_ */
