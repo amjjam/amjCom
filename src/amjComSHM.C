@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-amjComEndpointSHM::amjComEndpointSHM(std::string s,std::string r){
+amjComEndpointSHM::amjComEndpointSHM(std::string r,std::string s){
   create_shm_sem(s,&sshm,&ssem,true);
   create_shm_sem(r,&rshm,&rsem,false);
 }
