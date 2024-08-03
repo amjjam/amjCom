@@ -10,8 +10,8 @@
 #include <iostream>
 
 amjComEndpointSHM::amjComEndpointSHM(std::string r,std::string s){
-  create_shm_sem(s,&sshm,&ssem,true);
-  create_shm_sem(r,&rshm,&rsem,false);
+  create_shm_sem(r,&rshm,&rsem,&rmutex,false);
+  create_shm_sem(s,&sshm,&ssem,&smutex,true);
 }
 
 amjComEndpointSHM::~amjComEndpointSHM(){
@@ -20,11 +20,12 @@ amjComEndpointSHM::~amjComEndpointSHM(){
 }
 
 void amjComEndpointSHM::create_shm_sem(std::string s, struct shm **shm,
-				       sem_t **sem, bool init){
+				       sem_t **sem, sem_t **mutex, bool init){
 
   if(s.size()==0){
-    shm=nullptr;
-    sem=nullptr;
+    *shm=nullptr;
+    *sem=nullptr;
+    *mutex=nullptr;
     return;
   }
   
@@ -38,7 +39,7 @@ void amjComEndpointSHM::create_shm_sem(std::string s, struct shm **shm,
     abort();
   }
 
-  int n=sizeof(struct shm)+nbuf*sizeof(uint8_t *)+nbuf*size*sizeof(uint8_t);
+  int n=sizeof(struct shm)+nbuf*size*sizeof(uint8_t);
   if(ftruncate(fd,n)<0){
     perror("ftruncate: error:");
     abort();
@@ -50,20 +51,20 @@ void amjComEndpointSHM::create_shm_sem(std::string s, struct shm **shm,
     abort();
   };
 
-  if(init){
-    (*shm)->sidx=0;
-    (*shm)->ridx=0;
-    (*shm)->nbuf=nbuf;
-    (*shm)->size=size;
-  }
+  // This is the semaphore
+  *sem=sem_open(name.c_str(),O_CREAT,S_IRWXU,0);
 
-  (*shm)->d=(uint8_t **)((uint8_t *)*shm+sizeof(struct shm));
-  for(unsigned int i=0;i<(*shm)->nbuf;i++)
-    (*shm)->d[i]=(uint8_t *)*shm+sizeof(struct shm)+
-      (*shm)->nbuf*sizeof(uint8_t *)+i*size;
+  // This is the mutex
+  std::string name_mutex=name+"_mutex";
+  *mutex=sem_open(name_mutex.c_str(),O_CREAT,S_IRWXU,1);
   
-  //shm_unlink(name.c_str());
-  *sem=sem_open(name.c_str(),O_CREAT,S_IRWXU,0);  
+  if(!init)
+    return;
+  
+  (*shm)->sidx=0;
+  (*shm)->ridx=0;
+  (*shm)->nbuf=nbuf;
+  (*shm)->size=size;
 }
 
 int amjComEndpointSHM::send(amjPacket &p){
@@ -73,24 +74,47 @@ int amjComEndpointSHM::send(amjPacket &p){
 	      << std::endl;
   }
 
-  memcpy(sshm->d[sshm->sidx],p);
-  //int size=p.size();
-  //memcpy(sshm->d[sshm->sidx],&size,sizeof(int));
-  //memcpy(sshm->d[sshm->sidx]+sizeof(int),p._data(),size);
+  //sem_wait(smutex);
+  std::cerr << "send 1:" << std::endl;
+  std::cerr << "packet size: " << p.size() << std::endl;
+  print();
+  memcpy((uint8_t *)sshm+sizeof(struct shm)+sshm->sidx*sshm->size,p);
   sshm->sidx=(sshm->sidx+1)%sshm->nbuf;
+  std::cerr << "send 2:" << std::endl;
+  print();
   sem_post(ssem);
+  //sem_post(smutex);
   return p.size();
 }
 
 int amjComEndpointSHM::receive(amjPacket &p){
+  std::cerr << "receive 1:" << std::endl;
+  print();
   sem_wait(rsem);
-  memcpy(p,(const void *)rshm->d[rshm->ridx]);
-  //int size;
-  //memcpy(&size,rshm->d[rshm->ridx],sizeof(int));
-  //std::cout << size << std::endl;
-  //p.resize(size);
+  std::cerr << "receive 2:" << std::endl;
+  print();
+  //sem_wait(rmutex);
+  std::cerr << "offset: " << sizeof(struct shm) << std::endl;
+  memcpy(p,(uint8_t *)rshm+sizeof(struct shm)+rshm->ridx*rshm->size);
+  std::cerr << "packet size: " << p.size() << std::endl;
   p.start();
-  //memcpy(p._data(),rshm->d[rshm->ridx]+sizeof(int),size);
   rshm->ridx=(rshm->ridx+1)%rshm->nbuf;
+  //sem_post(rmutex);
   return p.size();
+}
+
+void amjComEndpointSHM::print(){
+  std::cerr << "send:" << std::endl;
+  print(sshm);
+  std::cerr << "receive:" << std::endl;
+  print(rshm);
+}
+
+void amjComEndpointSHM::print(struct shm *shm){
+  if(shm==nullptr){
+    std::cerr << "nullptr" << std::endl;
+    return;
+  }
+  std::cerr << "sidx=" << shm->sidx << std::endl;
+  std::cerr << "ridx=" << shm->ridx << std::endl;
 }

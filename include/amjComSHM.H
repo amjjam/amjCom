@@ -16,7 +16,8 @@
   two semaphores.
   
   <name> - a text string name. This is used as the name of named
-  semaphore.
+  semaphore which stores number of frames available, and used as basis for a
+  named semaphore which serves as a mutex.
   <nbufs> - the number of buffers in the circular fifo
   <size> - the size of each buffer
   
@@ -42,26 +43,24 @@ class amjComEndpointSHM: amjComEndpoint{
 public:
   amjComEndpointSHM(std::string,std::string);
   virtual ~amjComEndpointSHM();
+  //virtual int clear(); // Clears the FIFO and reset sidx and ridx to zero
   virtual int send(amjPacket &);
   virtual int receive(amjPacket &);
 private:
   struct shm{
     unsigned int sidx;
     unsigned int ridx;
-    uint8_t **d;
     unsigned int nbuf;
     unsigned int size;
   } *sshm, *rshm;
-  //uint8_t *send_shm;
   sem_t *ssem;
-  //int send_nbuf;
-  //int send_size;
-  //uint8_t *rshm;
+  sem_t *smutex;
   sem_t *rsem;
-  //int recv_nbuf;
-  //int recv_size;
+  sem_t *rmutex;
   void create_shm_sem(std::string s, struct shm **shm, sem_t **sem,
-		      bool init);
+		      sem_t **mutex, bool init);
+  void print();
+  void print(struct shm *);
 };
 
 #endif /* _AMJCOMSHM_H_ */

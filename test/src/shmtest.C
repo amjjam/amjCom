@@ -37,7 +37,7 @@ int main(int argc, char *argv[]){
   parse_args(argc,argv);
 
   if(send){
-    amjComEndpointSHM c(send_desc,"");
+    amjComEndpointSHM c("",send_desc);
     for(int i=0;;i++){
       p.clear();
       memcpy(p.write(sizeof(int)),&i,sizeof(int));
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]){
   }
   else if(recv){
     int j;
-    amjComEndpointSHM c("",recv_desc);
+    amjComEndpointSHM c(recv_desc,"");
     for(int i=0;;i++){
       c.receive(p);
       memcpy(&j,p.read(sizeof(int)),sizeof(int));

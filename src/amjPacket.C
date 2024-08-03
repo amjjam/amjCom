@@ -230,6 +230,7 @@ int memcpy(amjPacket &p, const void *src){
   int size;
   p.start();
   memcpy(&size,src,sizeof(int));
+  //std::cerr << "memcpy size: " << size << std::endl;
   memcpy(p.write(size),(uint8_t *)src+sizeof(int),size);
   //p.resize(size);
   //p.start();
