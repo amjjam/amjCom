@@ -5,6 +5,7 @@
 #include <cstring>
 #include <string>
 #include <complex>
+#include <stdint.h>
 
 #include "amjPacketRW.H"
 
