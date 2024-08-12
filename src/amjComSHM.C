@@ -74,32 +74,41 @@ int amjComEndpointSHM::send(amjPacket &p){
 	      << std::endl;
   }
 
-  //sem_wait(smutex);
-  std::cerr << "send 1:" << std::endl;
-  std::cerr << "packet size: " << p.size() << std::endl;
-  print();
+  sem_wait(smutex);
+  //std::cerr << "send 1:" << std::endl;
+  //std::cerr << "packet size: " << p.size() << std::endl;
+  //print();
   memcpy((uint8_t *)sshm+sizeof(struct shm)+sshm->sidx*sshm->size,p);
   sshm->sidx=(sshm->sidx+1)%sshm->nbuf;
-  std::cerr << "send 2:" << std::endl;
-  print();
-  sem_post(ssem);
-  //sem_post(smutex);
+  //std::cerr << "send 2:" << std::endl;
+  //print();
+  int sval;
+  if(sem_getvalue(ssem,&sval)<0){
+    std::cerr << "error: amjComEndpointSHM::send: could not "
+	      << "get value of ssem" << std::endl;
+    abort();
+  }
+  if((unsigned int)sval==sshm->nbuf)
+    sshm->ridx=(sshm->ridx+1)%sshm->nbuf;
+  else
+    sem_post(ssem);
+  sem_post(smutex);
   return p.size();
 }
 
 int amjComEndpointSHM::receive(amjPacket &p){
-  std::cerr << "receive 1:" << std::endl;
-  print();
+  //std::cerr << "receive 1:" << std::endl;
+  //print();
   sem_wait(rsem);
-  std::cerr << "receive 2:" << std::endl;
-  print();
-  //sem_wait(rmutex);
-  std::cerr << "offset: " << sizeof(struct shm) << std::endl;
+  //std::cerr << "receive 2:" << std::endl;
+  //print();
+  sem_wait(rmutex);
+  //std::cerr << "offset: " << sizeof(struct shm) << std::endl;
   memcpy(p,(uint8_t *)rshm+sizeof(struct shm)+rshm->ridx*rshm->size);
-  std::cerr << "packet size: " << p.size() << std::endl;
+  //std::cerr << "packet size: " << p.size() << std::endl;
   p.start();
   rshm->ridx=(rshm->ridx+1)%rshm->nbuf;
-  //sem_post(rmutex);
+  sem_post(rmutex);
   return p.size();
 }
 
@@ -118,3 +127,4 @@ void amjComEndpointSHM::print(struct shm *shm){
   std::cerr << "sidx=" << shm->sidx << std::endl;
   std::cerr << "ridx=" << shm->ridx << std::endl;
 }
+
