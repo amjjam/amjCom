@@ -39,12 +39,12 @@ int main(int argc, char *argv[]){
   std::shared_ptr<amjCom::Server> server;
   std::shared_ptr<amjCom::Client> client;
 
-  //amjCom::IOContext iocontext;
-  
   if(isServer)
-    server=std::shared_ptr<amjCom::Server>(new amjCom::TCP::Server(address,server_session,server_status/*,iocontext*/));
+    server=std::shared_ptr<amjCom::Server>
+      (new amjCom::TCP::Server(address,server_session,server_status));
   else
-    client=std::shared_ptr<amjCom::Client>(new amjCom::TCP::Client(address,client_receive,client_status/*,iocontext*/));
+    client=std::shared_ptr<amjCom::Client>
+      (new amjCom::TCP::Client(address,client_receive,client_status));
   
   char message[30];
   if(isServer)
