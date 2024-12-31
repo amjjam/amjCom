@@ -1,4 +1,4 @@
-CPPFLAGS=-Wall -g
+CPPFLAGS=-Wall -g -fPIC -I/opt/asio/include -I/opt/amj/include
 CPP=g++
 
 UDPTEST_SRC=udptest.C ../../src/amjComUDP.C ../../src/amjCom.C ../../src/amjPacket.C
@@ -13,7 +13,10 @@ MQTEST_OBJ=$(MQTEST_SRC:.C=.o)
 SHMTEST_SRC=shmtest.C ../../src/amjComSHM.C ../../src/amjCom.C ../../src/amjPacket.C
 SHMTEST_OBJ=$(SHMTEST_SRC:.C=.o)
 
-all: udptest udptest2 mqtest shmtest
+TCPTEST_SRC=tcptest.C ../../src/amjComTCP.C ../../src/amjCom.C ../../src/amjComASIO.C
+TCPTEST_OBJ=$(TCPTEST_SRC:.C=.o)
+
+all: udptest udptest2 mqtest shmtest tcptest
 
 udptest: $(UDPTEST_OBJ)
 	$(CPP) -o $@ $^
@@ -27,6 +30,10 @@ mqtest: $(MQTEST_OBJ)
 shmtest: $(SHMTEST_OBJ)
 	$(CPP) -o $@ $^ -lrt
 
+tcptest: $(TCPTEST_OBJ)
+	$(CPP) -o $@ $^ -lrt -L/opt/amj/lib -lamjArg -Wl,-rpath,/opt/amj/lib
+
 clean:
 	- rm $(UDPTEST_OBJ) $(UDPTEST2_OBJ) $(MQTEST_OBJ) $(SHMTEST_OBJ) \
-	udptest udptest2 mqtest
+	$(TCPTEST_OBJ) \
+	udptest udptest2 mqtest tcptest
