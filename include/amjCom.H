@@ -2,6 +2,8 @@
 #define _AMJCOM_H_
 
 #include <string>
+#include <functional>
+#include <memory>
 
 #include "amjPacket.H"
 
@@ -17,14 +19,96 @@ private:
 std::string split1(std::string);
 std::string split2(std::string);
 
-// class amjComServer{
-// public:
-//   amjComServer(){};
-//   virtual ~amjComServer(){};
-//   virtual amjComEndpoint* connection();
-// private:
-// };
+namespace amjCom{
+  enum Status {NoStatus,Ok,NotOk,NotFound};
+  enum Error {NoError,ConnectError,PeerError,WriteError,ReadError,PacketError};
 
+  /********** Packet **********************************************************/
+  
+  class Packet{
+  public:
+    Packet():p(0){};
+    ~Packet(){};
+    void clear(){_data.resize(0); p=0;};
+    size_t size(){return _data.size();};
+    void resize(size_t s);
+    int pos(){return p;};
+    void pos(size_t _p);
+    void begin(){pos(0);};
+    uint8_t *data(){return _data.data();};
+    uint8_t *write(size_t n);
+    uint8_t *read(size_t n);
+  private:
+    size_t p;
+    std::vector<uint8_t> _data;
+  };
+  
+  /********** Endpoint ********************************************************/
+  
+  class Endpoint{
+  public:
+    Endpoint(){}; // If the default construct is called,
+		  // callback_receive and callback_status must be
+		  // populated in another way
+    Endpoint(// Packet receive callback function
+	     std::function<void(Packet &)> callback_receive,
+	     // Status callback
+	     std::function<void(Status &)> callback_status):
+      callback_receive(callback_receive),callback_status(callback_status){}
+    virtual ~Endpoint(){};
+    Status status(){return _status;}
+    virtual void send(Packet &)=0;
+  protected:
+    Status _status;
+    std::function<void(Packet &)> callback_receive;
+    std::function<void(Status &)> callback_status;
+  };
+  
+  /********** Session *********************************************************/
+  
+  class Session: public Endpoint{
+  public:
+    Session(){};
+    virtual ~Session(){};
+    virtual void start(// Callback for packet receive
+		       std::function<void(Packet &)> callback_receive,
+		       //Callback for status change
+		       std::function<void(Status &)> callback_status)=0;
+  };
+
+  typedef std::shared_ptr<Session> pSession;
+  
+  /********** Server **********************************************************/
+  
+  class Server{
+  public:
+    Server(// Callback for new session
+	   std::function<void(pSession)> callback_session,
+	   // Callback for errors and disconnects
+	   std::function<void(Status)> callback_status):
+      callback_session(callback_session),callback_status(callback_status){};
+    virtual ~Server(){};
+  protected:
+    std::function<void(pSession)> callback_session;
+    std::function<void(Status)> callback_status;
+  };
+
+  /********** Client **********************************************************/
+  
+  class Client: public Endpoint{
+  public:
+    Client(){};
+    Client(// Packet receive callback function
+	     std::function<void(Packet &)> callback_receive,
+	     // Status callback
+	     std::function<void(Status &)> callback_status):
+      Endpoint(callback_receive,callback_status){};
+    virtual ~Client(){};
+  };
+
+  std::string split1(std::string s);
+  std::string split2(std::string s);
+}
 
 /*
 
