@@ -17,7 +17,8 @@ namespace amjCom{
       IOContext iocontext;
       virtual void send1(Packet &);
       void receive1();
-      virtual void error_handler()=0;
+      virtual void shutdown();
+      virtual void error_handler(std::string,Error,asio::error_code)=0;
     private:
       std::shared_ptr<asio::ip::tcp::socket> _socket_ptr;
       uint8_t header[4];
@@ -38,13 +39,11 @@ namespace amjCom{
       virtual void start(// Callback for packet receive
 			 std::function<void(Packet &)> callback_receive,
 			 // Callback for status change
-			 std::function<void(Status &)> callback_status);
+			 std::function<void(Status)> callback_status);
       void send(Packet &p){send1(p);};
     private:
       virtual void receive4(Packet &p){callback_receive(p);};
-      void error_handler(){/* close session. callback_status(disconnect).
-			      The application will have to delete the
-			      session */};
+      virtual void error_handler(std::string, Error, asio::error_code);
     };
 
     typedef std::shared_ptr<Session> pSession;
@@ -77,7 +76,7 @@ namespace amjCom{
 	     // Packet receive callback function
 	     std::function<void(Packet &)> callback_receive,
 	     // Status callback
-	     std::function<void(Status &)> callback_status,
+	     std::function<void(Status)> callback_status,
 	     // Optional IOContext
 	     IOContext iocontext=IOContext());
       virtual ~Client(){};
@@ -85,13 +84,15 @@ namespace amjCom{
     private:
       std::string server;
       asio::ip::tcp::resolver resolver;
+      asio::steady_timer timer;
       asio::ip::tcp::resolver::results_type endpoints;
       asio::ip::tcp::endpoint endpoint;
       virtual void receive4(Packet &p){callback_receive(p);};
-      virtual void error_handler(){/* disconnect. start time to reconnect. */};
+      virtual void error_handler(std::string,Error,asio::error_code);
       void resolve();
       void connect();
       void callback_connect(asio::error_code, const asio::ip::tcp::endpoint);
+      void callback_timer(asio::error_code);
     };
   }
 }
