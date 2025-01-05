@@ -1,7 +1,7 @@
-FLAGS=-Wall -g -fPIC
+FLAGS=-Wall -g -fPIC -I/opt/asio/include
 CPPFLAGS=$(FLAGS)
 
-AMJCOM_SRC=amjCom.C amjComUDP.C amjComMQ.C amjComSHM.C amjPacket.C
+AMJCOM_SRC=amjCom.C amjComUDP.C amjComMQ.C amjComSHM.C amjPacket.C amjComASIO.C
 AMJCOM_OBJ=$(AMJCOM_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
