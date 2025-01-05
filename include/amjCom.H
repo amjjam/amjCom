@@ -20,9 +20,58 @@ std::string split1(std::string);
 std::string split2(std::string);
 
 namespace amjCom{
-  enum Status {NoStatus,Ok,NotOk,NotFound};
-  enum Error {NoError,ConnectError,PeerError,WriteError,ReadError,PacketError};
+  /********** Status **********************************************************/
 
+  // State explanations: NoState is the default value in
+  // Status. WaitingToConnect means the communicator will try to
+  // connect in the future, for example waiting for a timeout before
+  // retrying. Connecting means is is actively connecting. Connected
+  // means there is a connection. Disconnecting means it is actively
+  // disconnecting. Disconnected means it is disconnected and not
+  // going to try to reconnect. A typical sequence for a socket might
+  // be Connecting -> Connected -> Disconnecting (after an error
+  // occurs) -> WaitingToConnect (during reconnect wait) -> Connecting
+  // -> -> Connected -> Disconnecting -> Disconnected (when it is
+  // shut down for good locally or by peer)
+  
+  enum State {NoState=0,WaitingToConnect=2,Connecting=3,Connected=4,
+	      Disconnecting=5,Disconnected=5};
+
+  // Error explanations: NoError is the default value in
+  // Error. ConnectError means making a connection failed. PeerError
+  // means connection is closed, but not cleanly. SendError means an
+  // error occurs during a send. ReceiveError means an error occurs
+  // during a receive. PacketError means an error occurs while
+  // manipulating a package. 
+
+  enum Error {NoError=0,ConnectError=1,PeerError=2,SendError=3,ReceiveError=4,
+	      PacketError=5};
+  
+  static std::vector<std::string> statedescriptions=
+    {"NoState","WaitingToConnect","Connecting","Connected","Disconnecting",
+     "Disconnected"};
+  static std::vector<std::string> errordescriptions=
+    {"None","ConnectError","PeerError","SendError","ReceiveError",
+     "PacketError"};
+  
+  class Status{
+  public:
+    Status(State state=NoState, Error error=NoError,
+	   std::string errormessage=""):
+      _state(state),_error(error),_errormessage(errormessage){};
+    virtual ~Status(){};
+    explicit operator bool(){if(_state==Connected) return true; return false;};
+    State state(){return _state;};
+    std::string statedescription(){return statedescriptions[_state];};
+    Error error(){return _error;};
+    void errormessage(std::string e){_errormessage=e;};
+    std::string errormessage(){return _errormessage;};
+  private:
+    State _state;
+    Error _error;
+    std::string _errormessage;
+  };
+  
   /********** Packet **********************************************************/
   
   class Packet{
@@ -53,7 +102,7 @@ namespace amjCom{
     Endpoint(// Packet receive callback function
 	     std::function<void(Packet &)> callback_receive,
 	     // Status callback
-	     std::function<void(Status &)> callback_status):
+	     std::function<void(Status)> callback_status):
       callback_receive(callback_receive),callback_status(callback_status){}
     virtual ~Endpoint(){};
     Status status(){return _status;}
@@ -61,7 +110,7 @@ namespace amjCom{
   protected:
     Status _status;
     std::function<void(Packet &)> callback_receive;
-    std::function<void(Status &)> callback_status;
+    std::function<void(Status)> callback_status;
   };
   
   /********** Session *********************************************************/
@@ -73,7 +122,7 @@ namespace amjCom{
     virtual void start(// Callback for packet receive
 		       std::function<void(Packet &)> callback_receive,
 		       //Callback for status change
-		       std::function<void(Status &)> callback_status)=0;
+		       std::function<void(Status)> callback_status)=0;
   };
 
   typedef std::shared_ptr<Session> pSession;
@@ -101,7 +150,7 @@ namespace amjCom{
     Client(// Packet receive callback function
 	     std::function<void(Packet &)> callback_receive,
 	     // Status callback
-	     std::function<void(Status &)> callback_status):
+	     std::function<void(Status)> callback_status):
       Endpoint(callback_receive,callback_status){};
     virtual ~Client(){};
   };
