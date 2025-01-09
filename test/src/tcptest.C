@@ -59,11 +59,14 @@ int main(int argc, char *argv[]){
     memcpy(p.write(30),message,30);
 
     if(!isServer)
-      client->send(p);
-   
+      if(!client->send(p))
+	std::cout << "tcptest: client: could not send" << std::endl;
+    
     m.lock();
     for(unsigned int i=0;i<sessions.size();i++)
-      sessions[i]->send(p);
+      if(!sessions[i]->send(p))
+	std::cout << "tcptest: server: session=" << i << ": could not send"
+		  << std::endl;;
     m.unlock();
     
     sleep(1);
@@ -96,8 +99,8 @@ void server_session(amjCom::pSession pS){
   std::cout << "New session:" << sessionID << std::endl;
   int _sessionID=sessionID; // Copy to avoid warning about capture of
                             // non-automatic variable
-  pS->start([&,_sessionID](amjCom::Packet p){session_receive(sessionID,p);},
-	    [&,_sessionID](amjCom::Status s){session_status(sessionID,s);});
+  pS->start([&,_sessionID](amjCom::Packet p){session_receive(_sessionID,p);},
+	    [&,_sessionID](amjCom::Status s){session_status(_sessionID,s);});
   m.lock();
   sessions.push_back(pS);
   sessionIDs.push_back(sessionID);
@@ -125,14 +128,16 @@ void client_receive(amjCom::Packet &p){
 	    << content(p) << std::endl;
 }
 
-void client_status(amjCom::Status){
-  std::cout << "Client status" << std::endl;
+void client_status(amjCom::Status s){
+  std::cout << "Client status:" << std::endl;
+  std::cout << "  state: " << s.statedescription() << std::endl;
+  std::cout << "  Error: " << s.errormessage() << std::endl;
 }
 
 std::string content(amjCom::Packet &p){
   std::string s;
   s.resize(p.size());
-  std::cout << "p.size(): " << p.size() << std::endl;
+  //std::cout << "p.size(): " << p.size() << std::endl;
   p.begin();
   memcpy(&s[0],p.read(p.size()),p.size());
   return s;
