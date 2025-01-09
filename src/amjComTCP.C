@@ -2,22 +2,22 @@
 
 namespace amjCom{
   namespace TCP{
-    void Common::send1(Packet &p){
+    bool Common::send1(Packet &p){
+      if(state()!=Connected)
+	return false;
       std::vector<uint8_t> d(4+p.size());
-      //std::cout << "send1: p.size()=" << p.size() << std::endl;
       uint32_t s=p.size();
       memcpy(d.data(),&s,sizeof(uint32_t));
       memcpy(d.data()+4,p.data(),p.size());
       asio::async_write(socket(),asio::buffer(d.data(),d.size()),
 			[&](asio::error_code e, std::size_t s){send2(e,s);});
+      return true;
     }
     
     void Common::send2(asio::error_code error, std::size_t s){
       /* here is where we handle the status of a send */
-      if(error){
-	std::cout << "send2: error: " << error.message() << std::endl;
+      if(error)
 	error_handler("send2: error: ",SendError,error);
-      }
     }
     
     void Common::receive1(){
@@ -30,9 +30,10 @@ namespace amjCom{
     void Common::receive2(asio::error_code error, std::size_t nh){
       /* read header callback */
       if(error||nh!=4){
-	std::cout << "amjComTCP::Common::receive2: n=" << nh << ", "
-		  << error.message() << std::endl;
-	error_handler("receive2: error: ",ReceiveError,error);
+	//std::cout << "amjComTCP::Common::receive2: n=" << nh << ", "
+	//	  << error.message() << std::endl;
+	error_handler("receive2: error: n="+std::to_string(nh)+": ",
+		      ReceiveError,error);
 	return;
       }
       uint32_t nb;
@@ -62,21 +63,21 @@ namespace amjCom{
 
     void Common::shutdown(){
       socket().shutdown(asio::ip::tcp::socket::shutdown_both);
-      socket().close();
+      //socket().close();
     }
     
     void Session::start(std::function<void(Packet &)> _callback_receive,
 			std::function<void(Status)> _callback_status){
       callback_receive=_callback_receive;
       callback_status=_callback_status;
+      status(Status(Connected));
       receive1();
     }
     
     void Session::error_handler(std::string error_prefix, Error error,
 				asio::error_code asio_error){
       Common::shutdown();
-      callback_status(Status(Disconnected,error,
-			     error_prefix+asio_error.message()));
+      status(Status(Disconnected,error,error_prefix+asio_error.message()));
     }
     
     Server::Server(const std::string &server,
@@ -124,7 +125,7 @@ namespace amjCom{
 		   IOContext iocontext):
       Common(iocontext),amjCom::Client(callback_receive,callback_status),
       server(server),resolver(iocontext.io_context()),
-      timer(iocontext.io_context()){
+      timer(iocontext.io_context(),std::chrono::seconds(5)){
       resolve();
     }
     
@@ -133,17 +134,17 @@ namespace amjCom{
 	 connect(). Later I will make this the initiation of a
 	 async_resolve, which will call callback_resolve when
 	 complete, and from there connect() will be called */
-      
+      status(Status(Resolving));      
       endpoints=resolver.resolve(split1(server),split2(server));
-      
       connect();
     }
           
     void Client::connect(){
       /* asynchronous connect */
       
+      status(Status(Connecting));
       asio::async_connect(socket(),endpoints,
-			  [&](asio::error_code e,
+			  [this](asio::error_code e,
 			      asio::ip::tcp::endpoint p){
 			    callback_connect(e,p);
 			  });
@@ -157,7 +158,9 @@ namespace amjCom{
 	error_handler("connect: error: ",ConnectError,error);
 	return;
       }
-      
+
+      std::cout << "Client::callback_connect: starting receive1" << std::endl;
+      status(Status(Connected));
       receive1();
     }    
     
@@ -166,23 +169,27 @@ namespace amjCom{
       Common::shutdown();
 
       /* report status to application */
-      callback_status(Status(Connecting,error,
-			     error_prefix+asio_error.message()));
+      status(Status(WaitingToConnect,error,error_prefix+asio_error.message()));
 
+      std::cout << "Client::error_handler: starting timer" << std::endl;
+      
       /* reconnect after a time */
-      timer.expires_after(std::chrono::seconds(1));
-      timer.async_wait([&](asio::error_code e){callback_timer(e);});
+      timer.expires_after(std::chrono::seconds(5));
+      timer.async_wait([this](asio::error_code e){callback_timer(e);});
     }
     
     void Client::callback_timer(asio::error_code error){
       if(error){
 	std::cout << "Client::callback_timer: error: " << error.message()
 		  << std::endl;
-	callback_status(Status(Disconnected,ConnectError,
-			       "connect: wait timer: error: "+error.message()));
+	sleep(1); // This blocks the thread, but there isn't much else
+		  // to do when the timer fails.
+	error_handler("Client::callback_timer: error: ",ConnectError,error);
+	status(Status(WaitingToConnect,ConnectError,
+		      "connect: wait timer: error: "+error.message()));
 	return;
       }
-      connect();
+      resolve();
     }
     
   }

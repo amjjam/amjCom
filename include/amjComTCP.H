@@ -15,7 +15,8 @@ namespace amjCom{
       asio::ip::tcp::socket &socket(){return *_socket_ptr;};
     protected:
       IOContext iocontext;
-      virtual void send1(Packet &);
+      virtual State state()=0;
+      virtual bool send1(Packet &);
       void receive1();
       virtual void shutdown();
       virtual void error_handler(std::string,Error,asio::error_code)=0;
@@ -40,12 +41,13 @@ namespace amjCom{
 			 std::function<void(Packet &)> callback_receive,
 			 // Callback for status change
 			 std::function<void(Status)> callback_status);
-      void send(Packet &p){send1(p);};
+      virtual bool send(Packet &p){return send1(p);};
     private:
+      virtual State state(){return _status.state();};
       virtual void receive4(Packet &p){callback_receive(p);};
       virtual void error_handler(std::string, Error, asio::error_code);
     };
-
+    
     typedef std::shared_ptr<Session> pSession;
     
     class Server: public amjCom::Server{
@@ -80,13 +82,14 @@ namespace amjCom{
 	     // Optional IOContext
 	     IOContext iocontext=IOContext());
       virtual ~Client(){};
-      void send(Packet &p){send1(p);};
+      virtual bool send(Packet &p){return send1(p);};
     private:
       std::string server;
       asio::ip::tcp::resolver resolver;
       asio::steady_timer timer;
       asio::ip::tcp::resolver::results_type endpoints;
       asio::ip::tcp::endpoint endpoint;
+      virtual State state(){return _status.state();};
       virtual void receive4(Packet &p){callback_receive(p);};
       virtual void error_handler(std::string,Error,asio::error_code);
       void resolve();
