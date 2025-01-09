@@ -34,8 +34,8 @@ namespace amjCom{
   // -> -> Connected -> Disconnecting -> Disconnected (when it is
   // shut down for good locally or by peer)
   
-  enum State {NoState=0,WaitingToConnect=2,Connecting=3,Connected=4,
-	      Disconnecting=5,Disconnected=5};
+  enum State {NoState=0,WaitingToConnect=1,Resolving=2,Connecting=3,Connected=4,
+	      Disconnecting=5,Disconnected=6};
 
   // Error explanations: NoError is the default value in
   // Error. ConnectError means making a connection failed. PeerError
@@ -48,8 +48,8 @@ namespace amjCom{
 	      PacketError=5};
   
   static std::vector<std::string> statedescriptions=
-    {"NoState","WaitingToConnect","Connecting","Connected","Disconnecting",
-     "Disconnected"};
+    {"NoState","WaitingToConnect","Resolving","Connecting","Connected",
+     "Disconnecting","Disconnected"};
   static std::vector<std::string> errordescriptions=
     {"None","ConnectError","PeerError","SendError","ReceiveError",
      "PacketError"};
@@ -106,9 +106,11 @@ namespace amjCom{
       callback_receive(callback_receive),callback_status(callback_status){}
     virtual ~Endpoint(){};
     Status status(){return _status;}
-    virtual void send(Packet &)=0;
+    // returns false if not connected in a state that allows sending
+    virtual bool send(Packet &)=0;
   protected:
     Status _status;
+    void status(Status s){_status=s; callback_status(_status);};
     std::function<void(Packet &)> callback_receive;
     std::function<void(Status)> callback_status;
   };
