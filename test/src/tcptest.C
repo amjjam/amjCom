@@ -52,6 +52,11 @@ int main(int argc, char *argv[]){
   else
     memcpy(message,"Hello from client! ",19);
   amjCom::Packet p;
+
+  if(isServer)
+    server->start();
+  else
+    client->start();
   
   for(int i=0;;i++){
     sprintf(message+19,"%d",i);
@@ -64,9 +69,16 @@ int main(int argc, char *argv[]){
     
     m.lock();
     for(unsigned int i=0;i<sessions.size();i++)
-      if(!sessions[i]->send(p))
-	std::cout << "tcptest: server: session=" << i << ": could not send"
-		  << std::endl;;
+      if(sessions[i]){
+	if(!sessions[i]->send(p)){
+	  std::cout << "tcptest: server: session=" << i
+		    << ": could not send, deleting." << std::endl;
+	  sessions[i].reset();
+	}
+      }
+      else{
+	std::cout << "tcptest: server: session=" << i << ": empty" << std::endl;
+      }
     m.unlock();
     
     sleep(1);
