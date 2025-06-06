@@ -2,6 +2,10 @@
 
 namespace amjCom{
   namespace TCP{
+    Common::~Common(){
+      shutdown();
+    }
+    
     bool Common::send1(Packet &p){
       if(state()!=Connected)
 	return false;
@@ -9,8 +13,10 @@ namespace amjCom{
       uint32_t s=p.size();
       memcpy(d.data(),&s,sizeof(uint32_t));
       memcpy(d.data()+4,p.data(),p.size());
+      auto self=shared_from_this();
       asio::async_write(socket(),asio::buffer(d.data(),d.size()),
-			[&](asio::error_code e, std::size_t s){send2(e,s);});
+			[self](asio::error_code e, std::size_t s)
+			{self->send2(e,s);});
       return true;
     }
     
@@ -22,9 +28,11 @@ namespace amjCom{
     
     void Common::receive1(){
       /* asynchronous read header */
+      auto self=shared_from_this();
       asio::async_read(socket(),asio::buffer(header,4),
-		       [&](asio::error_code e, std::size_t s){
-			 receive2(e,s);});
+		       [self](asio::error_code e, std::size_t s){
+			 if(self.use_count()==1) return;
+			 self->receive2(e,s);});
     }
     
     void Common::receive2(asio::error_code error, std::size_t nh){
@@ -41,9 +49,10 @@ namespace amjCom{
 
       /* asynchronous read body */
       p.clear();
+      auto self=shared_from_this();
       asio::async_read(socket(),asio::buffer(p.write(nb),nb),
-		       [&](asio::error_code e, std::size_t s)
-		       {receive3(e,s);});
+		       [self](asio::error_code e, std::size_t s)
+		       {self->receive3(e,s);});
     }
 
     void Common::receive3(asio::error_code error, std::size_t nb){
@@ -62,8 +71,13 @@ namespace amjCom{
     }
 
     void Common::shutdown(){
-      socket().shutdown(asio::ip::tcp::socket::shutdown_both);
-      //socket().close();
+      try{
+	socket().shutdown(asio::ip::tcp::socket::shutdown_both);
+	//socket().close();
+      }
+      catch(const std::exception &e){
+	std::cout << "Common::shutdown::catch" << std::endl;
+      }
     }
     
     void Session::start(std::function<void(Packet &)> _callback_receive,
@@ -93,15 +107,18 @@ namespace amjCom{
       /* somewhere in here should be the test for the server being up
 	 and the calling of server_error_handle1() */
       
-      accept_connection();
+      /* accept_connection(); now done with start() instead */
     }
     
     void Server::accept_connection(){
       std::cout << "Server: accept_connection" << std::endl;
       pSession new_session=pSession(new Session(iocontext));
+      auto self=shared_from_this();
       acceptor.async_accept(new_session->socket(),
-       			    [&,new_session](const asio::error_code& error)
-       			    {accept_callback(new_session,error);});
+       			    [self,new_session]
+			    (const asio::error_code& error)
+       			    {if(self.use_count()==1) return;
+			      self->accept_callback(new_session,error);});
     }
     
     void Server::accept_callback(pSession new_session,
@@ -126,7 +143,7 @@ namespace amjCom{
       Common(iocontext),amjCom::Client(callback_receive,callback_status),
       server(server),resolver(iocontext.io_context()),
       timer(iocontext.io_context(),std::chrono::seconds(5)){
-      resolve();
+      /* resolve(); now done with start() instead */
     }
     
     void Client::resolve(){
@@ -134,8 +151,18 @@ namespace amjCom{
 	 connect(). Later I will make this the initiation of a
 	 async_resolve, which will call callback_resolve when
 	 complete, and from there connect() will be called */
-      status(Status(Resolving));      
-      endpoints=resolver.resolve(split1(server),split2(server));
+      status(Status(Resolving));
+      try{
+	endpoints=resolver.resolve(split1(server),split2(server));
+      }
+      catch(const std::system_error &error){
+	error_handler("resolve: error: ",ConnectError,error);
+	return;
+      }
+      catch(const asio::error_code &error){
+	error_handler("resolve: error: ",ConnectError,error);
+	return;
+      }
       connect();
     }
           
@@ -143,10 +170,12 @@ namespace amjCom{
       /* asynchronous connect */
       
       status(Status(Connecting));
+      auto tmp=shared_from_this();
+      std::shared_ptr<Client> self=
+	std::static_pointer_cast<Client>(tmp);
       asio::async_connect(socket(),endpoints,
-			  [this](asio::error_code e,
-			      asio::ip::tcp::endpoint p){
-			    callback_connect(e,p);
+			  [self](asio::error_code e, asio::ip::tcp::endpoint p){
+			    self->callback_connect(e,p);
 			  });
     }
     
@@ -163,6 +192,23 @@ namespace amjCom{
       status(Status(Connected));
       receive1();
     }    
+
+    void Client::error_handler(std::string error_prefix,Error error,
+			       std::system_error system_error){
+      Common::shutdown();
+
+      /* report status to application */
+      status(Status(WaitingToConnect,error,error_prefix+"error code: "+
+                    std::to_string(system_error.code().value())+" "+system_error.what()));
+
+      std::cout << "Client::error_handler: starting timer" << std::endl;
+      
+      /* reconnect after a time */
+      timer.expires_after(std::chrono::seconds(5));
+      std::shared_ptr<Client> self=
+	std::static_pointer_cast<Client>(shared_from_this());
+      timer.async_wait([self](asio::error_code e){self->callback_timer(e);});
+    }
     
     void Client::error_handler(std::string error_prefix,Error error,
 			       asio::error_code asio_error){
@@ -175,7 +221,9 @@ namespace amjCom{
       
       /* reconnect after a time */
       timer.expires_after(std::chrono::seconds(5));
-      timer.async_wait([this](asio::error_code e){callback_timer(e);});
+      std::shared_ptr<Client> self=
+	std::static_pointer_cast<Client>(shared_from_this());
+      timer.async_wait([self](asio::error_code e){self->callback_timer(e);});
     }
     
     void Client::callback_timer(asio::error_code error){
