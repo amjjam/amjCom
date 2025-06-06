@@ -115,7 +115,7 @@ namespace amjCom{
     std::function<void(Status)> callback_status;
   };
   
-  /********** Session *********************************************************/
+  /********** Session ********************************************************/
   
   class Session: public Endpoint{
   public:
@@ -128,6 +128,39 @@ namespace amjCom{
   };
 
   typedef std::shared_ptr<Session> pSession;
+
+
+  /*
+  // Session is copyable and contains a shared pointer to _Session
+  class Session: public Endpoint{
+  public:
+    Session(){};
+    Session(std::shared_ptr<_Session> _session):_session(_session){};
+    virtual ~Session(){};
+    virtual void start(// Callback for packet receive
+		       std::function<void(Packet &)> callback_receive,
+		       //Callback for status change
+		       std::function<void(Status)> callback_status){
+      _session->start(callback_receive,callback_status);
+    }
+    virtual bool send(Packet &p){return _session->send(p);}
+  protected:
+    std::shared_ptr<_Session> _session;
+  };
+
+  // _Session is an object used as a shared pointer and is not copyable
+  class _Session: public Endpoint{
+  public:
+    Session(){};
+    Session(const Session &)=delete; // Make it no copyable
+    virtual ~Session(){};
+    virtual void start(// Callback for packet receive
+		       std::function<void(Packet &)> callback_receive,
+		       //Callback for status change
+		       std::function<void(Status)> callback_status)=0;
+    Session &operator=(const Session &)=delete; // Make it not copy assignable
+  };
+  */
   
   /********** Server **********************************************************/
   
@@ -139,6 +172,7 @@ namespace amjCom{
 	   std::function<void(Status)> callback_status):
       callback_session(callback_session),callback_status(callback_status){};
     virtual ~Server(){};
+    virtual void start()=0;
   protected:
     std::function<void(pSession)> callback_session;
     std::function<void(Status)> callback_status;
@@ -155,6 +189,7 @@ namespace amjCom{
 	     std::function<void(Status)> callback_status):
       Endpoint(callback_receive,callback_status){};
     virtual ~Client(){};
+    virtual void start()=0;
   };
 
   std::string split1(std::string s);
