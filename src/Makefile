@@ -1,14 +1,18 @@
-FLAGS=-Wall -g -fPIC -I/opt/asio/include
+ifndef prefix
+  prefix=/opt/amj
+endif
+
+ifndef asioprefix
+  asioprefix=/opt/asio/include
+endif
+
+FLAGS=-Wall -g -fPIC -I$(asioprefix)
 CPPFLAGS=$(FLAGS)
 
 AMJCOM_SRC=amjCom.C amjComUDP.C amjComMQ.C amjComSHM.C amjPacket.C amjComASIO.C
 AMJCOM_OBJ=$(AMJCOM_SRC:.C=.o)
 
 CPP=g++ $(CPPFLAGS)
-
-ifndef prefix
-  prefix=/opt/amj
-endif
 
 all: libamjCom.so
 
