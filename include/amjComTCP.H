@@ -1,18 +1,21 @@
 #ifndef _AMJCOMTCP_H_
 #define _AMJCOMTCP_H_
 
+#include <system_error>
+#include <memory>
+
 #include "amjCom.H"
 #include "amjComASIO.H"
 
 namespace amjCom{
   namespace TCP{
-    class Common{
+    class Common: public std::enable_shared_from_this<Common>{
     public:
       Common(IOContext iocontext):
 	iocontext(iocontext),
 	_socket_ptr(new asio::ip::tcp::socket(iocontext.io_context())){};
-      virtual ~Common(){};
       asio::ip::tcp::socket &socket(){return *_socket_ptr;};
+      ~Common();
     protected:
       IOContext iocontext;
       virtual State state()=0;
@@ -50,7 +53,8 @@ namespace amjCom{
     
     typedef std::shared_ptr<Session> pSession;
     
-    class Server: public amjCom::Server{
+    class Server: public amjCom::Server,
+		  public std::enable_shared_from_this<Server>{
     public:
       Server(// Description of where to listen, format is "<address>:<port>"
 	     const std::string &,
@@ -61,6 +65,7 @@ namespace amjCom{
 	     // Optional IOContext
 	     IOContext iocontext_=IOContext());
       virtual ~Server(){};
+      virtual void start(){accept_connection();};
     private:
       IOContext iocontext;
       asio::ip::tcp::acceptor acceptor;
@@ -82,6 +87,7 @@ namespace amjCom{
 	     // Optional IOContext
 	     IOContext iocontext=IOContext());
       virtual ~Client(){};
+      virtual void start(){resolve();};
       virtual bool send(Packet &p){return send1(p);};
     private:
       std::string server;
@@ -91,10 +97,11 @@ namespace amjCom{
       asio::ip::tcp::endpoint endpoint;
       virtual State state(){return _status.state();};
       virtual void receive4(Packet &p){callback_receive(p);};
+      virtual void error_handler(std::string,Error,std::system_error);
       virtual void error_handler(std::string,Error,asio::error_code);
       void resolve();
       void connect();
-      void callback_connect(asio::error_code, const asio::ip::tcp::endpoint);
+      virtual void callback_connect(asio::error_code, const asio::ip::tcp::endpoint);
       void callback_timer(asio::error_code);
     };
   }
