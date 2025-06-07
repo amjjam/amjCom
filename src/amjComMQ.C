@@ -47,9 +47,9 @@ void amjComEndpointMQ::init(std::string description, int direction,
 			    mqd_t *q, int *size){
   if(description.size()==0)
     return;
-  std::string name=split1(description);
-  int n=std::stoi(split1(split2(description)));
-  *size=std::stoi(split2(split2(description)));
+  std::string name=amjCom::split1(description);
+  int n=std::stoi(amjCom::split1(amjCom::split2(description)));
+  *size=std::stoi(amjCom::split2(amjCom::split2(description)));
 
   // Open the queue in non-blocking mode
   int flags=O_CREAT|O_NONBLOCK|(direction==SEND?O_WRONLY:O_RDONLY);

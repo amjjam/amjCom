@@ -55,8 +55,8 @@ struct sockaddr_in make_sockaddr_in(std::string &s){
     a.sin_addr.s_addr=INADDR_ANY;
   }
   else{
-    a.sin_port=htons(std::stoi(split2(s)));
-    a.sin_addr.s_addr=inet_addr(split1(s).c_str());
+    a.sin_port=htons(std::stoi(amjCom::split2(s)));
+    a.sin_addr.s_addr=inet_addr(amjCom::split1(s).c_str());
   }
   
   return a;

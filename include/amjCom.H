@@ -16,8 +16,8 @@ public:
 private:
 };
 
-std::string split1(std::string);
-std::string split2(std::string);
+//std::string split1(std::string);
+//std::string split2(std::string);
 
 namespace amjCom{
   /********** Status **********************************************************/
@@ -117,20 +117,32 @@ namespace amjCom{
   
   /********** Session ********************************************************/
   
-  class Session: public Endpoint{
+  // class Session: public Endpoint{
+  // public:
+  //   Session(){};
+  //   virtual ~Session(){};
+  //   virtual void start(// Callback for packet receive
+  // 		       std::function<void(Packet &)> callback_receive,
+  // 		       //Callback for status change
+  // 		       std::function<void(Status)> callback_status)=0;
+  // };
+
+  // typedef std::shared_ptr<Session> pSession;
+
+
+  // _Session is an object used as a shared pointer and is not copyable
+  class _Session: public Endpoint{
   public:
-    Session(){};
-    virtual ~Session(){};
+    _Session(){};
+    _Session(const _Session &)=delete; // Make it not copyable
+    _Session &operator=(const _Session &)=delete; // Make it not copy assignable
+    virtual ~_Session(){};
     virtual void start(// Callback for packet receive
 		       std::function<void(Packet &)> callback_receive,
 		       //Callback for status change
 		       std::function<void(Status)> callback_status)=0;
   };
 
-  typedef std::shared_ptr<Session> pSession;
-
-
-  /*
   // Session is copyable and contains a shared pointer to _Session
   class Session: public Endpoint{
   public:
@@ -147,34 +159,20 @@ namespace amjCom{
   protected:
     std::shared_ptr<_Session> _session;
   };
-
-  // _Session is an object used as a shared pointer and is not copyable
-  class _Session: public Endpoint{
-  public:
-    Session(){};
-    Session(const Session &)=delete; // Make it no copyable
-    virtual ~Session(){};
-    virtual void start(// Callback for packet receive
-		       std::function<void(Packet &)> callback_receive,
-		       //Callback for status change
-		       std::function<void(Status)> callback_status)=0;
-    Session &operator=(const Session &)=delete; // Make it not copy assignable
-  };
-  */
   
   /********** Server **********************************************************/
   
   class Server{
   public:
     Server(// Callback for new session
-	   std::function<void(pSession)> callback_session,
+	   std::function<void(Session)> callback_session,
 	   // Callback for errors and disconnects
 	   std::function<void(Status)> callback_status):
       callback_session(callback_session),callback_status(callback_status){};
     virtual ~Server(){};
     virtual void start()=0;
   protected:
-    std::function<void(pSession)> callback_session;
+    std::function<void(Session)> callback_session;
     std::function<void(Status)> callback_status;
   };
 

@@ -29,9 +29,9 @@ void amjComEndpointSHM::create_shm_sem(std::string s, struct shm **shm,
     return;
   }
   
-  std::string name=split1(s);
-  int nbuf=atoi(split1(split2(s)).c_str());
-  int size=atoi(split2(split2(s)).c_str());
+  std::string name=amjCom::split1(s);
+  int nbuf=atoi(amjCom::split1(amjCom::split2(s)).c_str());
+  int size=atoi(amjCom::split2(amjCom::split2(s)).c_str());
   
   int fd;
   if((fd=shm_open(name.c_str(),O_RDWR|O_CREAT,0660))<0){

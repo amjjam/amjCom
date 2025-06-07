@@ -36,10 +36,10 @@ namespace amjCom{
       virtual void receive4(Packet &p)=0; 
     };
     
-    class Session: public Common, public amjCom::Session{
+    class _Session: public Common, public amjCom::_Session{
     public:
-      Session(IOContext iocontext):Common(iocontext){};
-      virtual ~Session(){};
+      _Session(IOContext iocontext):Common(iocontext){};
+      virtual ~_Session(){};
       virtual void start(// Callback for packet receive
 			 std::function<void(Packet &)> callback_receive,
 			 // Callback for status change
@@ -50,8 +50,18 @@ namespace amjCom{
       virtual void receive4(Packet &p){callback_receive(p);};
       virtual void error_handler(std::string, Error, asio::error_code);
     };
+
+    class Session: public amjCom::Session{
+    public:
+      Session(std::shared_ptr<_Session> _session):amjCom::Session(_session){};
+      virtual ~Session(){};
+      asio::ip::tcp::socket &socket(){
+	return std::dynamic_pointer_cast<_Session>(_session)->socket();
+      };      
+    private:
+    };
     
-    typedef std::shared_ptr<Session> pSession;
+    //typedef std::shared_ptr<Session> pSession;
     
     class Server: public amjCom::Server,
 		  public std::enable_shared_from_this<Server>{
@@ -59,7 +69,7 @@ namespace amjCom{
       Server(// Description of where to listen, format is "<address>:<port>"
 	     const std::string &,
 	     // Callback for new session
-	     std::function<void(amjCom::pSession)> callback_session,
+	     std::function<void(amjCom::Session)> callback_session,
 	     // Callback for errors and disconnects
 	     std::function<void(Status)> callback_status,
 	     // Optional IOContext
@@ -70,7 +80,7 @@ namespace amjCom{
       IOContext iocontext;
       asio::ip::tcp::acceptor acceptor;
       void accept_connection();
-      void accept_callback(pSession, const asio::error_code &);
+      void accept_callback(Session, const asio::error_code &);
       void server_error_handler(){/* for the case that server creation
 				     fails */};
       void accept_error_handler(){/* for the case that an accept fails */};
