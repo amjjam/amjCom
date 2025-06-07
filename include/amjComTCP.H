@@ -61,8 +61,6 @@ namespace amjCom{
     private:
     };
     
-    //typedef std::shared_ptr<Session> pSession;
-    
     class Server: public amjCom::Server,
 		  public std::enable_shared_from_this<Server>{
     public:
@@ -116,6 +114,5 @@ namespace amjCom{
     };
   }
 }
-
 
 #endif /* _AMJCOMTCP_H_ */

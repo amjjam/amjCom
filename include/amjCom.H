@@ -117,19 +117,6 @@ namespace amjCom{
   
   /********** Session ********************************************************/
   
-  // class Session: public Endpoint{
-  // public:
-  //   Session(){};
-  //   virtual ~Session(){};
-  //   virtual void start(// Callback for packet receive
-  // 		       std::function<void(Packet &)> callback_receive,
-  // 		       //Callback for status change
-  // 		       std::function<void(Status)> callback_status)=0;
-  // };
-
-  // typedef std::shared_ptr<Session> pSession;
-
-
   // _Session is an object used as a shared pointer and is not copyable
   class _Session: public Endpoint{
   public:

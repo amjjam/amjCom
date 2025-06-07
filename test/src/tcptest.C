@@ -146,7 +146,7 @@ void client_status(amjCom::Status s){
 std::string content(amjCom::Packet &p){
   std::string s;
   s.resize(p.size());
-  std::cout << "p.size(): " << p.size() << std::endl;
+  //std::cout << "p.size(): " << p.size() << std::endl;
   p.begin();
   std::memcpy(&s[0],p.read(p.size()),p.size());
   return s;
