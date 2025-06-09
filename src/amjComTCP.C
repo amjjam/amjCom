@@ -80,23 +80,23 @@ namespace amjCom{
       }
     }
     
-    void _Session::start(std::function<void(Packet &)> _callback_receive,
-			 std::function<void(Status)> _callback_status){
+    void Session::start(std::function<void(amjCom::Session &, Packet &)> _callback_receive,
+			std::function<void(amjCom::Session &, Status)> _callback_status){
       callback_receive=_callback_receive;
       callback_status=_callback_status;
       status(Status(Connected));
       receive1();
     }
     
-    void _Session::error_handler(std::string error_prefix, Error error,
+    void Session::error_handler(std::string error_prefix, Error error,
 				 asio::error_code asio_error){
       Common::shutdown();
       status(Status(Disconnected,error,error_prefix+asio_error.message()));
     }
     
     Server::Server(const std::string &server,
-		   std::function<void(amjCom::Session)> callback_session,
-		   std::function<void(Status)> callback_status,
+		   std::function<void(amjCom::Server &, amjCom::pSession)> callback_session,
+		   std::function<void(amjCom::Server &, Status)> callback_status,
 		   IOContext iocontext_):
       amjCom::Server(callback_session,callback_status),iocontext(iocontext_),
       acceptor(iocontext.io_context(),
@@ -112,33 +112,34 @@ namespace amjCom{
     
     void Server::accept_connection(){
       std::cout << "Server: accept_connection" << std::endl;
-      Session next_session(std::make_shared<_Session>(iocontext));
-      //pSession new_session=pSession(new Session(iocontext));
+      //Session next_session(iocontext);
+      //Session next_session(std::make_shared<_Session>(iocontext));
+      pSession next_session=pSession(new Session(iocontext));
       auto self=shared_from_this();
-      acceptor.async_accept(next_session.socket(),
+      acceptor.async_accept(next_session->socket(),
        			    [self,next_session]
 			    (const asio::error_code& error)
        			    {if(self.use_count()==1) return;
 			      self->accept_callback(next_session,error);});
     }
     
-    void Server::accept_callback(Session next_session,
+    void Server::accept_callback(pSession next_session,
 				 const asio::error_code& error){
       std::cout << "Server: accept_callback" << std::endl;
       if(error){
 	accept_error_handler(); /* Nothing to be done */
 	return;
       }
-      callback_session(next_session);
+      callback_session((*this),next_session);
       accept_connection();
     }
     
     Client::Client(// Server to connect to <address>:<port>
 		   std::string &server,
 		   // Packet receive callback function
-		   std::function<void(Packet &)> callback_receive,
+		   std::function<void(amjCom::Client &, amjCom::Packet &)> callback_receive,
 		   // Status callback
-		   std::function<void(Status)> callback_status,
+		   std::function<void(amjCom::Client &, Status)> callback_status,
 		   // Optional IOContext
 		   IOContext iocontext):
       Common(iocontext),amjCom::Client(callback_receive,callback_status),

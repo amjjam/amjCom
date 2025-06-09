@@ -20,18 +20,17 @@ bool isServer;
 std::string address;
 int sessionID=0;
 
-void server_session(amjCom::Session);
-void server_status(amjCom::Status);
-void session_receive(int sessionID, amjCom::Packet &);
-void session_status(int sessionID, amjCom::Status s);
-void client_receive(amjCom::Packet &);
-void client_status(amjCom::Status);
+void server_session(amjCom::Server &, amjCom::pSession);
+void server_status(amjCom::Server &, amjCom::Status);
+void session_receive(int,amjCom::Session &, amjCom::Packet &);
+void session_status(int,amjCom::Session &, amjCom::Status s);
+void client_receive(amjCom::Client &, amjCom::Packet &);
+void client_status(amjCom::Client &, amjCom::Status);
 std::string content(amjCom::Packet &p);
+void print_status(const amjCom::Status &s);
 
 std::mutex m;
-std::vector<amjCom::Session> sessions;
-std::vector<int> sessionIDs;
-
+std::vector<amjCom::pSession> sessions;
 
 int main(int argc, char *argv[]){
   parse_args(argc,argv);
@@ -69,11 +68,10 @@ int main(int argc, char *argv[]){
     
     m.lock();
     for(unsigned int i=0;i<sessions.size();i++)
-      if(!sessions[i].send(p)){
+      if(!sessions[i]->send(p)){
 	std::cout << "tcptest: server: session=" << i
 		  << ": could not send, deleting." << std::endl;
 	sessions.erase(sessions.begin()+i);
-	sessionIDs.erase(sessionIDs.begin()+i);
       }
     m.unlock();
     
@@ -103,43 +101,49 @@ void parse_args(int argc, char *argv[]){
   }
 }
 
-void server_session(amjCom::Session S){
+void server_session(amjCom::Server &server, amjCom::pSession session){
   std::cout << "New session:" << sessionID << std::endl;
   int _sessionID=sessionID; // Copy to avoid warning about capture of
                             // non-automatic variable
-  S.start([&,_sessionID](amjCom::Packet p){session_receive(_sessionID,p);},
-	  [&,_sessionID](amjCom::Status s){session_status(_sessionID,s);});
+  session->start([&,_sessionID](amjCom::Session &s, amjCom::Packet p)
+  {session_receive(_sessionID,s,p);},
+    [&,_sessionID](amjCom::Session &S, amjCom::Status s)
+    {session_status(_sessionID,S,s);});
   m.lock();
-  sessions.push_back(S);
-  sessionIDs.push_back(sessionID);
+  sessions.push_back(session);
   m.unlock();
   
   sessionID++;
 }
 
-void server_status(amjCom::Status){
-  std::cout << "Server: status" << std::endl;
+void server_status(amjCom::Server &server, amjCom::Status s){
+  std::cout << "Server: status:" << std::endl;
+  print_status(s);
 }
 
-void session_receive(int sessionID, amjCom::Packet &p){
+void session_receive(int sessionID, amjCom::Session &s, amjCom::Packet &p){
   std::cout << "Session " << sessionID << ": packet received: "
 	    << content(p) <<  std::endl;
+  char message[40];
+  sprintf(message,"server response to sessionID=%d",sessionID);
+  p.clear();
+  memcpy(p.write(strlen(message)),message,strlen(message));
+  s.send(p);
 }
 
-void session_status(int sessionID, amjCom::Status s){
-  std::cout << "Session" << sessionID << ": status update received"
-	    << std::endl;
+void session_status(int sessionID, amjCom::Session &S, amjCom::Status s){
+  std::cout << "Session: status:" << std::endl;
+  print_status(s);
 }
 
-void client_receive(amjCom::Packet &p){
+void client_receive(amjCom::Client &, amjCom::Packet &p){
   std::cout << "tcptest: client_receive: packet received: "
 	    << content(p) << std::endl;
 }
 
-void client_status(amjCom::Status s){
-  std::cout << "Client status:" << std::endl;
-  std::cout << "  state: " << s.statedescription() << std::endl;
-  std::cout << "  Error: " << s.errormessage() << std::endl;
+void client_status(amjCom::Client &, amjCom::Status s){
+  std::cout << "Client: status:" << std::endl;
+  print_status(s);
 }
 
 #include <cstring>
@@ -150,4 +154,9 @@ std::string content(amjCom::Packet &p){
   p.begin();
   std::memcpy(&s[0],p.read(p.size()),p.size());
   return s;
+}
+
+void print_status(const amjCom::Status &s){
+  std::cout << "   state: " << s.statedescription() << std::endl;
+  std::cout << "   error: " << s.errormessage() << std::endl;
 }

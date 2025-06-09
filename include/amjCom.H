@@ -61,11 +61,11 @@ namespace amjCom{
       _state(state),_error(error),_errormessage(errormessage){};
     virtual ~Status(){};
     explicit operator bool(){if(_state==Connected) return true; return false;};
-    State state(){return _state;};
-    std::string statedescription(){return statedescriptions[_state];};
-    Error error(){return _error;};
+    State state() const {return _state;};
+    std::string statedescription() const {return statedescriptions[_state];};
+    Error error() const {return _error;};
     void errormessage(std::string e){_errormessage=e;};
-    std::string errormessage(){return _errormessage;};
+    std::string errormessage() const {return _errormessage;};
   private:
     State _state;
     Error _error;
@@ -99,68 +99,74 @@ namespace amjCom{
     Endpoint(){}; // If the default construct is called,
 		  // callback_receive and callback_status must be
 		  // populated in another way
-    Endpoint(// Packet receive callback function
-	     std::function<void(Packet &)> callback_receive,
-	     // Status callback
-	     std::function<void(Status)> callback_status):
-      callback_receive(callback_receive),callback_status(callback_status){}
+    // Endpoint(// Packet receive callback function
+    // 	     std::function<void(Endpoint &, Packet &)> callback_receive,
+    // 	     // Status callback
+    // 	     std::function<void(Endpoint &, Status)> callback_status):
+    //   callback_receive(callback_receive),callback_status(callback_status){}
     virtual ~Endpoint(){};
     Status status(){return _status;}
     // returns false if not connected in a state that allows sending
     virtual bool send(Packet &)=0;
   protected:
     Status _status;
-    void status(Status s){_status=s; callback_status(_status);};
-    std::function<void(Packet &)> callback_receive;
-    std::function<void(Status)> callback_status;
+    virtual void status(Status s)=0; // Set _status and call callback_status{_status=s; callback_status((*this),_status);};
+    // std::function<void(Endpoint &, Packet &)> callback_receive;
+    // std::function<void(Endpoint &, Status)> callback_status;
   };
   
   /********** Session ********************************************************/
   
   // _Session is an object used as a shared pointer and is not copyable
-  class _Session: public Endpoint{
-  public:
-    _Session(){};
-    _Session(const _Session &)=delete; // Make it not copyable
-    _Session &operator=(const _Session &)=delete; // Make it not copy assignable
-    virtual ~_Session(){};
-    virtual void start(// Callback for packet receive
-		       std::function<void(Packet &)> callback_receive,
-		       //Callback for status change
-		       std::function<void(Status)> callback_status)=0;
-  };
+  // class _Session: public Endpoint{
+  // public:
+  //   _Session(){};
+  //   _Session(const _Session &)=delete; // Make it not copyable
+  //   _Session &operator=(const _Session &)=delete; // Make it not copy assignable
+  //   virtual ~_Session(){};
+  //   virtual void start(// Callback for packet receive
+  // 		       std::function<void(Endpoint &, Packet &)> callback_receive,
+  // 		       //Callback for status change
+  // 		       std::function<void(Endpoint &, Status)> callback_status)=0;
+  // };
 
   // Session is copyable and contains a shared pointer to _Session
   class Session: public Endpoint{
   public:
     Session(){};
-    Session(std::shared_ptr<_Session> _session):_session(_session){};
+    //Session(std::shared_ptr<_Session> _session):_session(_session){};
     virtual ~Session(){};
     virtual void start(// Callback for packet receive
-		       std::function<void(Packet &)> callback_receive,
+		       std::function<void(Session &, Packet &)> callback_receive,
 		       //Callback for status change
-		       std::function<void(Status)> callback_status){
-      _session->start(callback_receive,callback_status);
-    }
-    virtual bool send(Packet &p){return _session->send(p);}
+		       std::function<void(Session &, Status)> callback_status)=0;
+    //{
+    //  _session->start(callback_receive,callback_status);
+    //}
+    //virtual bool send(Packet &p){return _session->send(p);}
   protected:
-    std::shared_ptr<_Session> _session;
+    void status(Status s){_status=s; callback_status((*this),_status);};
+    //std::shared_ptr<_Session> _session;
+    std::function<void(Session &, Packet &)> callback_receive;
+    std::function<void(Session &, Status)> callback_status;
   };
+
+  typedef std::shared_ptr<Session> pSession;
   
   /********** Server **********************************************************/
   
   class Server{
   public:
     Server(// Callback for new session
-	   std::function<void(Session)> callback_session,
+	   std::function<void(Server &, pSession)> callback_session,
 	   // Callback for errors and disconnects
-	   std::function<void(Status)> callback_status):
+	   std::function<void(Server &, Status)> callback_status):
       callback_session(callback_session),callback_status(callback_status){};
     virtual ~Server(){};
     virtual void start()=0;
   protected:
-    std::function<void(Session)> callback_session;
-    std::function<void(Status)> callback_status;
+    std::function<void(Server &, pSession)> callback_session;
+    std::function<void(Server &, Status)> callback_status;
   };
 
   /********** Client **********************************************************/
@@ -169,12 +175,16 @@ namespace amjCom{
   public:
     Client(){};
     Client(// Packet receive callback function
-	     std::function<void(Packet &)> callback_receive,
-	     // Status callback
-	     std::function<void(Status)> callback_status):
-      Endpoint(callback_receive,callback_status){};
+	   std::function<void(Client &, Packet &)> callback_receive,
+	   // Status callback
+	   std::function<void(Client &, Status)> callback_status):
+      callback_receive(callback_receive),callback_status(callback_status){};
     virtual ~Client(){};
     virtual void start()=0;
+  protected:
+    void status(Status s){_status=s; callback_status((*this),_status);};
+    std::function<void(Client &, Packet &)> callback_receive;
+    std::function<void(Client &, Status)> callback_status;
   };
 
   std::string split1(std::string s);

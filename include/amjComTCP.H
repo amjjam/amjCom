@@ -36,30 +36,35 @@ namespace amjCom{
       virtual void receive4(Packet &p)=0; 
     };
     
-    class _Session: public Common, public amjCom::_Session{
+    class Session: public Common, public amjCom::Session{
     public:
-      _Session(IOContext iocontext):Common(iocontext){};
-      virtual ~_Session(){};
+      Session(IOContext iocontext):Common(iocontext){};
+      virtual ~Session(){};
       virtual void start(// Callback for packet receive
-			 std::function<void(Packet &)> callback_receive,
+			 std::function<void(amjCom::Session &, Packet &)> callback_receive,
 			 // Callback for status change
-			 std::function<void(Status)> callback_status);
+			 std::function<void(amjCom::Session &, Status)> callback_status);
       virtual bool send(Packet &p){return send1(p);};
+    protected:
+      virtual void status(Status s){_status=s; callback_status((*this),_status);};
     private:
       virtual State state(){return _status.state();};
-      virtual void receive4(Packet &p){callback_receive(p);};
+      virtual void receive4(Packet &p){callback_receive((*this),p);};
       virtual void error_handler(std::string, Error, asio::error_code);
     };
 
-    class Session: public amjCom::Session{
-    public:
-      Session(std::shared_ptr<_Session> _session):amjCom::Session(_session){};
-      virtual ~Session(){};
-      asio::ip::tcp::socket &socket(){
-	return std::dynamic_pointer_cast<_Session>(_session)->socket();
-      };      
-    private:
-    };
+    typedef std::shared_ptr<Session> pSession;
+    
+    // class Session: public Common, public amjCom::Session{
+    // public:
+    //   Session(IOContext iocontext):Common(iocontext){}
+    //   //Session(std::shared_ptr<_Session> _session):amjCom::Session(_session){};
+    //   virtual ~Session(){};
+    //   asio::ip::tcp::socket &socket(){
+    // 	return std::dynamic_pointer_cast<_Session>(_session)->socket();
+    //   };      
+    // private:
+    // };
     
     class Server: public amjCom::Server,
 		  public std::enable_shared_from_this<Server>{
@@ -67,9 +72,9 @@ namespace amjCom{
       Server(// Description of where to listen, format is "<address>:<port>"
 	     const std::string &,
 	     // Callback for new session
-	     std::function<void(amjCom::Session)> callback_session,
+	     std::function<void(amjCom::Server &, amjCom::pSession)> callback_session,
 	     // Callback for errors and disconnects
-	     std::function<void(Status)> callback_status,
+	     std::function<void(amjCom::Server &, Status)> callback_status,
 	     // Optional IOContext
 	     IOContext iocontext_=IOContext());
       virtual ~Server(){};
@@ -78,7 +83,7 @@ namespace amjCom{
       IOContext iocontext;
       asio::ip::tcp::acceptor acceptor;
       void accept_connection();
-      void accept_callback(Session, const asio::error_code &);
+      void accept_callback(pSession, const asio::error_code &);
       void server_error_handler(){/* for the case that server creation
 				     fails */};
       void accept_error_handler(){/* for the case that an accept fails */};
@@ -89,9 +94,9 @@ namespace amjCom{
       Client(// Description of the server
 	     std::string &server,
 	     // Packet receive callback function
-	     std::function<void(Packet &)> callback_receive,
+	     std::function<void(amjCom::Client &, Packet &)> callback_receive,
 	     // Status callback
-	     std::function<void(Status)> callback_status,
+	     std::function<void(amjCom::Client &, Status)> callback_status,
 	     // Optional IOContext
 	     IOContext iocontext=IOContext());
       virtual ~Client(){};
@@ -104,7 +109,7 @@ namespace amjCom{
       asio::ip::tcp::resolver::results_type endpoints;
       asio::ip::tcp::endpoint endpoint;
       virtual State state(){return _status.state();};
-      virtual void receive4(Packet &p){callback_receive(p);};
+      virtual void receive4(Packet &p){callback_receive((*this),p);};
       virtual void error_handler(std::string,Error,std::system_error);
       virtual void error_handler(std::string,Error,asio::error_code);
       void resolve();
