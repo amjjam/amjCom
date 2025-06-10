@@ -20,8 +20,10 @@ namespace amjCom{
   };
 
   uint8_t *Packet::read(size_t n){
+    size_t pos=p;
     if(p+n>_data.size()) return nullptr;
-    return &_data[p];
+    p+=n;
+    return &_data[pos];
   };
 
   std::string split1(std::string s){
