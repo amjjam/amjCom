@@ -20,8 +20,8 @@ bool isServer;
 std::string address;
 int sessionID=0;
 
-void server_session(amjCom::Server &, amjCom::pSession);
-void server_status(amjCom::Server &, amjCom::Status);
+void server_session(amjCom::Server, amjCom::pSession);
+void server_status(amjCom::Server, amjCom::Status);
 void session_receive(int,amjCom::Session &, amjCom::Packet &);
 void session_status(int,amjCom::Session &, amjCom::Status s);
 void client_receive(amjCom::Client &, amjCom::Packet &);
@@ -35,15 +35,13 @@ std::vector<amjCom::pSession> sessions;
 int main(int argc, char *argv[]){
   parse_args(argc,argv);
 
-  std::shared_ptr<amjCom::Server> server;
+  amjCom::Server server;
   std::shared_ptr<amjCom::Client> client;
 
   if(isServer)
-    server=std::shared_ptr<amjCom::Server>
-      (new amjCom::TCP::Server(address,server_session,server_status));
+    server=amjCom::TCP::create_server(address,server_session,server_status);
   else
-    client=std::shared_ptr<amjCom::Client>
-      (new amjCom::TCP::Client(address,client_receive,client_status));
+    client=std::make_shared<amjCom::TCP::Client>(address,client_receive,client_status);
   
   char message[30];
   if(isServer)
@@ -101,7 +99,7 @@ void parse_args(int argc, char *argv[]){
   }
 }
 
-void server_session(amjCom::Server &server, amjCom::pSession session){
+void server_session(amjCom::Server server, amjCom::pSession session){
   std::cout << "New session:" << sessionID << std::endl;
   int _sessionID=sessionID; // Copy to avoid warning about capture of
                             // non-automatic variable
@@ -116,7 +114,7 @@ void server_session(amjCom::Server &server, amjCom::pSession session){
   sessionID++;
 }
 
-void server_status(amjCom::Server &server, amjCom::Status s){
+void server_status(amjCom::Server server, amjCom::Status s){
   std::cout << "Server: status:" << std::endl;
   print_status(s);
 }

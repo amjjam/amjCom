@@ -32,7 +32,7 @@ namespace amjCom{
       void receive3(asio::error_code,std::size_t);
       // receive4 is defined in Session and Client to call
       // callback_receive because callback_receive is defined in base
-      // class Endpoint and unknown in class Common
+      // classes Client and Session and unknown in class Common
       virtual void receive4(Packet &p)=0; 
     };
     
@@ -55,31 +55,27 @@ namespace amjCom{
 
     typedef std::shared_ptr<Session> pSession;
     
-    // class Session: public Common, public amjCom::Session{
-    // public:
-    //   Session(IOContext iocontext):Common(iocontext){}
-    //   //Session(std::shared_ptr<_Session> _session):amjCom::Session(_session){};
-    //   virtual ~Session(){};
-    //   asio::ip::tcp::socket &socket(){
-    // 	return std::dynamic_pointer_cast<_Session>(_session)->socket();
-    //   };      
-    // private:
-    // };
-    
-    class Server: public amjCom::Server,
-		  public std::enable_shared_from_this<Server>{
+    class _Server: public amjCom::_Server,
+		   public std::enable_shared_from_this<_Server>{
     public:
-      Server(// Description of where to listen, format is "<address>:<port>"
-	     const std::string &,
-	     // Callback for new session
-	     std::function<void(amjCom::Server &, amjCom::pSession)> callback_session,
-	     // Callback for errors and disconnects
-	     std::function<void(amjCom::Server &, Status)> callback_status,
-	     // Optional IOContext
-	     IOContext iocontext_=IOContext());
-      virtual ~Server(){};
+      static std::shared_ptr<_Server> create
+      (// Description of where to listen, format is "<address>:<port>"
+       const std::string &,
+       // Callback for new session
+       std::function<void(amjCom::Server, amjCom::pSession)>
+       callback_session,
+       // Callback for errors and disconnects
+       std::function<void(amjCom::Server, Status)> callback_status,
+       // Optional IOContext
+       IOContext iocontext_);//=IOContext());
       virtual void start(){accept_connection();};
+      ~_Server(){};
     private:
+      _Server(const std::string &,
+	      std::function<void(amjCom::Server, amjCom::pSession)> callback_session,
+	      std::function<void(amjCom::Server, Status)> callback_status,
+	      IOContext iocontext_=IOContext());
+      //friend std::default_delete<_Server>;
       IOContext iocontext;
       asio::ip::tcp::acceptor acceptor;
       void accept_connection();
@@ -87,12 +83,30 @@ namespace amjCom{
       void server_error_handler(){/* for the case that server creation
 				     fails */};
       void accept_error_handler(){/* for the case that an accept fails */};
+
+      //template<typename T, typename... Args>
+      //friend std::shared_ptr<T> std::make_shared(Args&&...);
     };
-    
+
+    using Server=std::shared_ptr<_Server>;
+
+    Server create_server
+    (
+     // Description of where to listen, format is "<address>:<port>"
+     const std::string &address,
+     // Callback for new session
+     std::function<void(amjCom::Server, amjCom::pSession)>
+     callback_session,
+     // Callback for errors and disconnects
+     std::function<void(amjCom::Server, Status)> callback_status,
+     // Optional IOContext
+     IOContext iocontext_=IOContext());
+
+        
     class Client: public Common, public amjCom::Client{
     public:
       Client(// Description of the server
-	     std::string &server,
+	     const std::string &server,
 	     // Packet receive callback function
 	     std::function<void(amjCom::Client &, Packet &)> callback_receive,
 	     // Status callback
