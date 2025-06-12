@@ -17,7 +17,7 @@ private:
 };
 
 namespace amjCom{
-  /********** Status **********************************************************/
+  /********** Status *********************************************************/
 
   // State explanations: NoState is the default value in
   // Status. WaitingToConnect means the communicator will try to
@@ -31,8 +31,8 @@ namespace amjCom{
   // -> -> Connected -> Disconnecting -> Disconnected (when it is
   // shut down for good locally or by peer)
   
-  enum State {NoState=0,WaitingToConnect=1,Resolving=2,Connecting=3,Connected=4,
-	      Disconnecting=5,Disconnected=6};
+  enum State {NoState=0,WaitingToConnect=1,Resolving=2,Connecting=3,
+	      Connected=4,Disconnecting=5,Disconnected=6};
 
   // Error explanations: NoError is the default value in
   // Error. ConnectError means making a connection failed. PeerError
@@ -69,7 +69,7 @@ namespace amjCom{
     std::string _errormessage;
   };
   
-  /********** Packet **********************************************************/
+  /********** Packet *********************************************************/
   
   class Packet{
   public:
@@ -89,7 +89,7 @@ namespace amjCom{
     std::vector<uint8_t> _data;
   };
   
-  /********** Endpoint ********************************************************/
+  /********** Endpoint *******************************************************/
   
   class Endpoint{
   public:
@@ -100,38 +100,46 @@ namespace amjCom{
     virtual bool send(Packet &)=0;
   protected:
     Status _status;
-    virtual void status(Status s)=0;
+    virtual void status(Status s){_status=s;}
   };
   
   /********** Session ********************************************************/
   
 
   // Session is copyable and contains a shared pointer to _Session
-  class Session: public Endpoint{
+  class Session: public Endpoint,
+		 public std::enable_shared_from_this<Session>{
   public:
     Session(){};
-    //Session(std::shared_ptr<_Session> _session):_session(_session){};
     virtual ~Session(){};
     virtual void start(// Callback for packet receive
-		       std::function<void(Session &, Packet &)> callback_receive,
+		       std::function<void(std::shared_ptr<Session>, Packet &)>
+		       callback_receive,
 		       //Callback for status change
-		       std::function<void(Session &, Status)> callback_status)=0;
+		       std::function<void(std::shared_ptr<Session>, Status)>
+		       callback_status)=0;
   protected:
-    void status(Status s){_status=s; callback_status((*this),_status);};
-    std::function<void(Session &, Packet &)> callback_receive;
-    std::function<void(Session &, Status)> callback_status;
+    using Endpoint::status;
+    void status(std::shared_ptr<Session> session, Status status){
+      Endpoint::status(status);
+      callback_status(session,status);
+    };
+    std::function<void(std::shared_ptr<Session>, Packet &)> callback_receive;
+    std::function<void(std::shared_ptr<Session>, Status)> callback_status;
   };
-
+  
   typedef std::shared_ptr<Session> pSession;
   
-  /********** Server **********************************************************/
+  /********** Server *********************************************************/
   
-  class _Server{
+  class _Server: public std::enable_shared_from_this<_Server>{
   public:
     _Server(// Callback for new session
-	    std::function<void(std::shared_ptr<_Server>, pSession)> callback_session,
+	    std::function<void(std::shared_ptr<_Server>, pSession)>
+	    callback_session,
 	   // Callback for errors and disconnects
-	    std::function<void(std::shared_ptr<_Server>, Status)> callback_status):
+	    std::function<void(std::shared_ptr<_Server>, Status)>
+	    callback_status):
       callback_session(callback_session),callback_status(callback_status){};
     virtual ~_Server(){};
     virtual void start()=0;
@@ -139,30 +147,37 @@ namespace amjCom{
     std::function<void(std::shared_ptr<_Server>, pSession)> callback_session;
     std::function<void(std::shared_ptr<_Server>, Status)> callback_status;
   };
-
+  
   using Server=std::shared_ptr<_Server>;
   
-  /********** Client **********************************************************/
+  /********** Client *********************************************************/
   
-  class Client: public Endpoint{
+  class _Client: public Endpoint{
   public:
-    Client(){};
-    Client(// Packet receive callback function
-	   std::function<void(Client &, Packet &)> callback_receive,
-	   // Status callback
-	   std::function<void(Client &, Status)> callback_status):
+    _Client(){};
+    _Client(// Packet receive callback function
+	    std::function<void(std::shared_ptr<_Client>, Packet &)>
+	    callback_receive,
+	    // Status callback
+	    std::function<void(std::shared_ptr<_Client>, Status)>
+	    callback_status):
       callback_receive(callback_receive),callback_status(callback_status){};
-    virtual ~Client(){};
+    virtual ~_Client(){};
     virtual void start()=0;
   protected:
-    void status(Status s){_status=s; callback_status((*this),_status);};
-    std::function<void(Client &, Packet &)> callback_receive;
-    std::function<void(Client &, Status)> callback_status;
+    using Endpoint::status;
+    void status(std::shared_ptr<_Client> c, Status s){
+      Endpoint::status(s);
+      callback_status(c,_status);
+    };
+    std::function<void(std::shared_ptr<_Client>, Packet &)> callback_receive;
+    std::function<void(std::shared_ptr<_Client>, Status)> callback_status;
   };
 
+  using Client=std::shared_ptr<_Client>;
+  
   std::string split1(std::string s);
   std::string split2(std::string s);
 }
 
 #endif /* _AMJCOM_H_ */
-

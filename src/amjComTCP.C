@@ -13,7 +13,7 @@ namespace amjCom{
       uint32_t s=p.size();
       memcpy(d.data(),&s,sizeof(uint32_t));
       memcpy(d.data()+4,p.data(),p.size());
-      auto self=shared_from_this();
+      auto self=getself();
       asio::async_write(socket(),asio::buffer(d.data(),d.size()),
 			[self](asio::error_code e, std::size_t s)
 			{self->send2(e,s);});
@@ -28,7 +28,7 @@ namespace amjCom{
     
     void Common::receive1(){
       /* asynchronous read header */
-      auto self=shared_from_this();
+      std::shared_ptr<Common> self=getself();
       asio::async_read(socket(),asio::buffer(header,4),
 		       [self](asio::error_code e, std::size_t s){
 			 if(self.use_count()==1) return;
@@ -44,15 +44,15 @@ namespace amjCom{
       }
       uint32_t nb;
       memcpy(&nb,header,sizeof(uint32_t));
-
+      
       /* asynchronous read body */
       p.clear();
-      auto self=shared_from_this();
+      std::shared_ptr<Common> self=getself();
       asio::async_read(socket(),asio::buffer(p.write(nb),nb),
 		       [self](asio::error_code e, std::size_t s)
 		       {self->receive3(e,s);});
     }
-
+    
     void Common::receive3(asio::error_code error, std::size_t nb){
       if(error){
 	std::cout << "amjComTCP::Common::receive3: error: "
@@ -68,7 +68,7 @@ namespace amjCom{
       /* start next receive */
       receive1();
     }
-
+    
     void Common::shutdown(){
       try{
 	socket().shutdown(asio::ip::tcp::socket::shutdown_both);
@@ -79,8 +79,10 @@ namespace amjCom{
       }
     }
     
-    void Session::start(std::function<void(amjCom::Session &, Packet &)> _callback_receive,
-			std::function<void(amjCom::Session &, Status)> _callback_status){
+    void Session::start(std::function<void(amjCom::pSession, Packet &)>
+			_callback_receive,
+			std::function<void(amjCom::pSession, Status)>
+			_callback_status){
       callback_receive=_callback_receive;
       callback_status=_callback_status;
       status(Status(Connected));
@@ -88,23 +90,26 @@ namespace amjCom{
     }
     
     void Session::error_handler(std::string error_prefix, Error error,
-				 asio::error_code asio_error){
+				asio::error_code asio_error){
       Common::shutdown();
       status(Status(Disconnected,error,error_prefix+asio_error.message()));
     }
-
+    
     std::shared_ptr<_Server> _Server::create
     (const std::string &server,
      std::function<void(amjCom::Server, amjCom::pSession)> callback_session,
      std::function<void(amjCom::Server, Status)> callback_status,
      IOContext iocontext_){
-
-      return std::shared_ptr<_Server>(new _Server(server,callback_session,callback_status,iocontext_));
+      
+      return std::shared_ptr<_Server>
+	(new _Server(server,callback_session,callback_status,iocontext_));
     }
     
     _Server::_Server(const std::string &server,
-		     std::function<void(amjCom::Server, amjCom::pSession)> callback_session,
-		     std::function<void(amjCom::Server, Status)> callback_status,
+		     std::function<void(amjCom::Server, amjCom::pSession)>
+		     callback_session,
+		     std::function<void(amjCom::Server, Status)>
+		     callback_status,
 		     IOContext iocontext_):
       amjCom::_Server(callback_session,callback_status),iocontext(iocontext_),
       acceptor(iocontext.io_context(),
@@ -120,8 +125,9 @@ namespace amjCom{
     
     void _Server::accept_connection(){
       std::cout << "Server: accept_connection" << std::endl;
-      pSession next_session=std::make_shared<Session>(iocontext);//new Session(iocontext));
-      auto self=shared_from_this();
+      pSession next_session=std::make_shared<amjCom::TCP::Session>(iocontext);
+      std::shared_ptr<_Server> self=
+	std::static_pointer_cast<_Server>(shared_from_this());
       acceptor.async_accept(next_session->socket(),
        			    [self,next_session]
 			    (const asio::error_code& error)
@@ -151,21 +157,33 @@ namespace amjCom{
 			     iocontext_);
     }
     
-    Client::Client(// Server to connect to <address>:<port>
-		   const std::string &server,
-		   // Packet receive callback function
-		   std::function<void(amjCom::Client &, amjCom::Packet &)> callback_receive,
-		   // Status callback
-		   std::function<void(amjCom::Client &, Status)> callback_status,
-		   // Optional IOContext
-		   IOContext iocontext):
-      Common(iocontext),amjCom::Client(callback_receive,callback_status),
+    std::shared_ptr<_Client> _Client::create
+    (const std::string &server,
+     std::function<void(amjCom::Client, amjCom::Packet &)> callback_receive,
+     std::function<void(amjCom::Client, amjCom::Status)> callback_status,
+     IOContext iocontext_){
+      
+      return std::shared_ptr<_Client>
+	(new _Client(server,callback_receive,callback_status,iocontext_));
+    }
+
+    _Client::_Client(// Server to connect to <address>:<port>
+		     const std::string &server,
+		     // Packet receive callback function
+		     std::function<void(amjCom::Client, amjCom::Packet &)>
+		     callback_receive,
+		     // Status callback
+		     std::function<void(amjCom::Client, amjCom::Status)>
+		     callback_status,
+		     // Optional IOContext
+		     IOContext iocontext):
+      Common(iocontext),amjCom::_Client(callback_receive,callback_status),
       server(server),resolver(iocontext.io_context()),
       timer(iocontext.io_context(),std::chrono::seconds(5)){
       /* resolve(); now done with start() instead */
     }
     
-    void Client::resolve(){
+    void _Client::resolve(){
       /* For the moment do a synchronous resolve and then call
 	 connect(). Later I will make this the initiation of a
 	 async_resolve, which will call callback_resolve when
@@ -184,21 +202,20 @@ namespace amjCom{
       }
       connect();
     }
-          
-    void Client::connect(){
+    
+    void _Client::connect(){
       /* asynchronous connect */
       
       status(Status(Connecting));
-      auto tmp=shared_from_this();
-      std::shared_ptr<Client> self=
-	std::static_pointer_cast<Client>(tmp);
-      asio::async_connect(socket(),endpoints,
-			  [self](asio::error_code e, asio::ip::tcp::endpoint p){
-			    self->callback_connect(e,p);
-			  });
+      std::shared_ptr<_Client> self=
+	std::static_pointer_cast<_Client>(shared_from_this());
+      asio::async_connect
+	(socket(),endpoints,
+	 [self](asio::error_code e, asio::ip::tcp::endpoint p){
+	   self->callback_connect(e,p);});
     }
     
-    void Client::callback_connect(asio::error_code error,
+    void _Client::callback_connect(asio::error_code error,
 				  asio::ip::tcp::endpoint ep){
       if(error){
 	std::cout << "Client::callback_connect: error: " << error.message()
@@ -206,46 +223,47 @@ namespace amjCom{
 	error_handler("connect: error: ",ConnectError,error);
 	return;
       }
-
+      
       std::cout << "Client::callback_connect: starting receive1" << std::endl;
       status(Status(Connected));
       receive1();
     }    
-
-    void Client::error_handler(std::string error_prefix,Error error,
+    
+    void _Client::error_handler(std::string error_prefix,Error error,
 			       std::system_error system_error){
       Common::shutdown();
-
+      
       /* report status to application */
       status(Status(WaitingToConnect,error,error_prefix+"error code: "+
-                    std::to_string(system_error.code().value())+" "+system_error.what()));
+                    std::to_string(system_error.code().value())+" "
+		    +system_error.what()));
 
       std::cout << "Client::error_handler: starting timer" << std::endl;
       
       /* reconnect after a time */
       timer.expires_after(std::chrono::seconds(5));
-      std::shared_ptr<Client> self=
-	std::static_pointer_cast<Client>(shared_from_this());
+      std::shared_ptr<_Client> self=
+	std::static_pointer_cast<_Client>(shared_from_this());
       timer.async_wait([self](asio::error_code e){self->callback_timer(e);});
     }
     
-    void Client::error_handler(std::string error_prefix,Error error,
+    void _Client::error_handler(std::string error_prefix,Error error,
 			       asio::error_code asio_error){
       Common::shutdown();
-
+      
       /* report status to application */
       status(Status(WaitingToConnect,error,error_prefix+asio_error.message()));
-
+      
       std::cout << "Client::error_handler: starting timer" << std::endl;
       
       /* reconnect after a time */
       timer.expires_after(std::chrono::seconds(5));
-      std::shared_ptr<Client> self=
-	std::static_pointer_cast<Client>(shared_from_this());
+      std::shared_ptr<_Client> self=
+	std::static_pointer_cast<_Client>(shared_from_this());
       timer.async_wait([self](asio::error_code e){self->callback_timer(e);});
     }
     
-    void Client::callback_timer(asio::error_code error){
+    void _Client::callback_timer(asio::error_code error){
       if(error){
 	std::cout << "Client::callback_timer: error: " << error.message()
 		  << std::endl;
@@ -258,6 +276,16 @@ namespace amjCom{
       }
       resolve();
     }
-    
+
+    Client create_client(const std::string &server,
+			 std::function<void(amjCom::Client, Packet &)>
+			 callback_receive,
+			 std::function<void(amjCom::Client, amjCom::Status)>
+			 callback_status,
+			 IOContext iocontext){
+      return _Client::create(server,callback_receive,callback_status,
+			     iocontext);
+    }
+
   }
 }
