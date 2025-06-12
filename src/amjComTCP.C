@@ -61,7 +61,6 @@ namespace amjCom{
 	return;
       }
       /* callback to application - via derived class - with packet */
-      std::cout << "receive3: p.size()=" << p.size() << std::endl;
       p.begin();
       receive4(p);
       
