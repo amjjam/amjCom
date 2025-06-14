@@ -39,7 +39,7 @@ namespace amjCom{
   // means connection is closed, but not cleanly. SendError means an
   // error occurs during a send. ReceiveError means an error occurs
   // during a receive. PacketError means an error occurs while
-  // manipulating a package. 
+  // manipulating a package.
 
   enum Error {NoError=0,ConnectError=1,PeerError=2,SendError=3,ReceiveError=4,
 	      PacketError=5};
@@ -131,7 +131,7 @@ namespace amjCom{
   typedef std::shared_ptr<Session> pSession;
   
   /********** Server *********************************************************/
-  
+
   class _Server: public std::enable_shared_from_this<_Server>{
   public:
     _Server(// Callback for new session
