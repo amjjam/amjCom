@@ -95,7 +95,7 @@ namespace amjCom{
   public:
     Endpoint(){};
     virtual ~Endpoint(){};
-    Status status(){return _status;}
+    Status status() const {return _status;}
     // returns false if not connected in a state that allows sending
     virtual bool send(Packet &)=0;
   protected:
@@ -118,8 +118,8 @@ namespace amjCom{
 		       //Callback for status change
 		       std::function<void(std::shared_ptr<Session>, Status)>
 		       callback_status)=0;
-  protected:
     using Endpoint::status;
+  protected:
     void status(std::shared_ptr<Session> session, Status status){
       Endpoint::status(status);
       callback_status(session,status);
@@ -164,8 +164,8 @@ namespace amjCom{
       callback_receive(callback_receive),callback_status(callback_status){};
     virtual ~_Client(){};
     virtual void start()=0;
-  protected:
     using Endpoint::status;
+  protected:
     void status(std::shared_ptr<_Client> c, Status s){
       Endpoint::status(s);
       callback_status(c,_status);
