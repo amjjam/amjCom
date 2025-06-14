@@ -107,35 +107,36 @@ namespace amjCom{
   
 
   // Session is copyable and contains a shared pointer to _Session
-  class Session: public Endpoint,
-		 public std::enable_shared_from_this<Session>{
+  class _Session: public Endpoint,
+		  public std::enable_shared_from_this<_Session>{
   public:
-    Session(){};
-    virtual ~Session(){};
+    _Session(){};
+    virtual ~_Session(){};
     virtual void start(// Callback for packet receive
-		       std::function<void(std::shared_ptr<Session>, Packet &)>
+		       std::function<void(std::shared_ptr<_Session>, Packet &)>
 		       callback_receive,
 		       //Callback for status change
-		       std::function<void(std::shared_ptr<Session>, Status)>
+		       std::function<void(std::shared_ptr<_Session>, Status)>
 		       callback_status)=0;
     using Endpoint::status;
   protected:
-    void status(std::shared_ptr<Session> session, Status status){
+    void status(std::shared_ptr<_Session> session, Status status){
       Endpoint::status(status);
       callback_status(session,status);
     };
-    std::function<void(std::shared_ptr<Session>, Packet &)> callback_receive;
-    std::function<void(std::shared_ptr<Session>, Status)> callback_status;
+    std::function<void(std::shared_ptr<_Session>, Packet &)> callback_receive;
+    std::function<void(std::shared_ptr<_Session>, Status)> callback_status;
   };
-  
-  typedef std::shared_ptr<Session> pSession;
+
+  using Session=std::shared_ptr<_Session>;
+  //typedef std::shared_ptr<Session> pSession;
   
   /********** Server *********************************************************/
 
   class _Server: public std::enable_shared_from_this<_Server>{
   public:
     _Server(// Callback for new session
-	    std::function<void(std::shared_ptr<_Server>, pSession)>
+	    std::function<void(std::shared_ptr<_Server>, Session)>
 	    callback_session,
 	   // Callback for errors and disconnects
 	    std::function<void(std::shared_ptr<_Server>, Status)>
@@ -144,7 +145,7 @@ namespace amjCom{
     virtual ~_Server(){};
     virtual void start()=0;
   protected:
-    std::function<void(std::shared_ptr<_Server>, pSession)> callback_session;
+    std::function<void(std::shared_ptr<_Server>, Session)> callback_session;
     std::function<void(std::shared_ptr<_Server>, Status)> callback_status;
   };
   

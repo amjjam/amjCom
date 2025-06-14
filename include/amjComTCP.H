@@ -37,36 +37,37 @@ namespace amjCom{
       virtual void receive4(Packet &p)=0; 
     };
     
-    class Session: public Common, public amjCom::Session
+    class _Session: public Common, public amjCom::_Session
 		   /*,public std::enable_shared_from_this<Session>*/{
     public:
-      Session(IOContext iocontext):Common(iocontext){};
-      virtual ~Session(){};
+      _Session(IOContext iocontext):Common(iocontext){};
+      virtual ~_Session(){};
       virtual void start(// Callback for packet receive
-			 std::function<void(amjCom::pSession, Packet &)>
+			 std::function<void(amjCom::Session, Packet &)>
 			 callback_receive,
 			 // Callback for status change
-			 std::function<void(amjCom::pSession, Status)>
+			 std::function<void(amjCom::Session, Status)>
 			 callback_status);
       virtual bool send(Packet &p){return send1(p);};
     protected:
       std::shared_ptr<Common> getself(){
 	return std::dynamic_pointer_cast<Common>(shared_from_this());
       }
-      virtual void status(Status s){amjCom::Session::status(shared_from_this(),s);}
+      virtual void status(Status s){amjCom::_Session::status(shared_from_this(),s);}
     private:
       virtual State state(){return _status.state();};
       virtual void receive4(Packet &p){callback_receive(shared_from_this(),p);};
       virtual void error_handler(std::string, Error, asio::error_code);
     };
 
-    typedef std::shared_ptr<Session> pSession;
+    //typedef std::shared_ptr<Session> pSession;
+    using Session=std::shared_ptr<_Session>;
     
     class _Server: public amjCom::_Server{
     public:
       static std::shared_ptr<_Server>
       create(const std::string &,
-	     std::function<void(amjCom::Server, amjCom::pSession)>
+	     std::function<void(amjCom::Server, amjCom::Session)>
 	     callback_session,
 	     std::function<void(amjCom::Server, Status)> callback_status,
 	     IOContext iocontext_);
@@ -74,14 +75,14 @@ namespace amjCom{
       ~_Server(){};
     private:
       _Server(const std::string &,
-	      std::function<void(amjCom::Server, amjCom::pSession)>
+	      std::function<void(amjCom::Server, amjCom::Session)>
 	      callback_session,
 	      std::function<void(amjCom::Server, Status)> callback_status,
 	      IOContext iocontext_=IOContext());
       IOContext iocontext;
       asio::ip::tcp::acceptor acceptor;
       void accept_connection();
-      void accept_callback(pSession, const asio::error_code &);
+      void accept_callback(Session, const asio::error_code &);
       void server_error_handler(){/* for the case that server creation
 				     fails */};
       void accept_error_handler(){/* for the case that an accept fails */};
@@ -92,7 +93,7 @@ namespace amjCom{
     Server create_server(// Where to listen, format is "<address>:<port>"
 			 const std::string &address,
 			 // Callback for new session
-			 std::function<void(amjCom::Server, amjCom::pSession)>
+			 std::function<void(amjCom::Server, amjCom::Session)>
 			 callback_session,
 			 // Callback for errors and disconnects
 			 std::function<void(amjCom::Server, Status)>
