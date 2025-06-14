@@ -5,13 +5,13 @@
 
 
 amjArg::Help help({
-    /*========================================================================*/
+    /*=======================================================================*/
     "tcptest",
     "",
     "Test the amjCom::TCP functionality",
     "--server <string> run as server listenning on <string>=address:port",
     "--client <string> run as client connecting to <string>=address:port"
-    /*========================================================================*/
+    /*=======================================================================*/
   });
 
 void parse_args(int argc, char *argv[]);
@@ -22,10 +22,10 @@ int sessionID=0;
 
 void server_session(amjCom::Server, amjCom::pSession);
 void server_status(amjCom::Server, amjCom::Status);
-void session_receive(int,amjCom::Session &, amjCom::Packet &);
-void session_status(int,amjCom::Session &, amjCom::Status s);
-void client_receive(amjCom::Client &, amjCom::Packet &);
-void client_status(amjCom::Client &, amjCom::Status);
+void session_receive(int,amjCom::pSession, amjCom::Packet &);
+void session_status(int,amjCom::pSession, amjCom::Status s);
+void client_receive(amjCom::Client, amjCom::Packet &);
+void client_status(amjCom::Client, amjCom::Status);
 std::string content(amjCom::Packet &p);
 void print_status(const amjCom::Status &s);
 
@@ -36,12 +36,14 @@ int main(int argc, char *argv[]){
   parse_args(argc,argv);
 
   amjCom::Server server;
-  std::shared_ptr<amjCom::Client> client;
+  amjCom::Client client;
+  //  std::shared_ptr<amjCom::Client> client;
 
   if(isServer)
     server=amjCom::TCP::create_server(address,server_session,server_status);
   else
-    client=std::make_shared<amjCom::TCP::Client>(address,client_receive,client_status);
+    client=amjCom::TCP::create_client(address,client_receive,client_status);
+  //client=std::make_shared<amjCom::TCP::Client>(address,client_receive,client_status);
   
   char message[30];
   if(isServer)
@@ -103,9 +105,9 @@ void server_session(amjCom::Server server, amjCom::pSession session){
   std::cout << "New session:" << sessionID << std::endl;
   int _sessionID=sessionID; // Copy to avoid warning about capture of
                             // non-automatic variable
-  session->start([&,_sessionID](amjCom::Session &s, amjCom::Packet p)
+  session->start([&,_sessionID](amjCom::pSession s, amjCom::Packet p)
   {session_receive(_sessionID,s,p);},
-    [&,_sessionID](amjCom::Session &S, amjCom::Status s)
+    [&,_sessionID](amjCom::pSession S, amjCom::Status s)
     {session_status(_sessionID,S,s);});
   m.lock();
   sessions.push_back(session);
@@ -119,27 +121,27 @@ void server_status(amjCom::Server server, amjCom::Status s){
   print_status(s);
 }
 
-void session_receive(int sessionID, amjCom::Session &s, amjCom::Packet &p){
+void session_receive(int sessionID, amjCom::pSession s, amjCom::Packet &p){
   std::cout << "Session " << sessionID << ": packet received: "
 	    << content(p) <<  std::endl;
   char message[40];
   sprintf(message,"server response to sessionID=%d",sessionID);
   p.clear();
   memcpy(p.write(strlen(message)),message,strlen(message));
-  s.send(p);
+  s->send(p);
 }
 
-void session_status(int sessionID, amjCom::Session &S, amjCom::Status s){
+void session_status(int sessionID, amjCom::pSession S, amjCom::Status s){
   std::cout << "Session: status:" << std::endl;
   print_status(s);
 }
 
-void client_receive(amjCom::Client &, amjCom::Packet &p){
+void client_receive(amjCom::Client, amjCom::Packet &p){
   std::cout << "tcptest: client_receive: packet received: "
 	    << content(p) << std::endl;
 }
 
-void client_status(amjCom::Client &, amjCom::Status s){
+void client_status(amjCom::Client, amjCom::Status s){
   std::cout << "Client: status:" << std::endl;
   print_status(s);
 }
