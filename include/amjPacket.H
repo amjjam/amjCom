@@ -20,6 +20,7 @@ public:
   int start(){return seek(0);};
   void reserve(int n){_d.reserve(n);}
   int size() const {return _d.size();}
+  unsigned int pos() const {return offset;}
   std::vector<char> &data(){return _d;}
   char *raw(){return _d.data();}
   char *_data(){return _d.data();}
