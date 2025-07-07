@@ -3,8 +3,12 @@ ifndef prefix
 endif
 
 ifndef asioprefix
-  asioprefix=/opt/asio/include
+  asioprefix=../include
 endif
+
+#ifndef asioprefix
+#  asioprefix=/opt/asio/include
+#endif
 
 FLAGS=-Wall -g -fPIC -I$(asioprefix)
 CPPFLAGS=$(FLAGS)
