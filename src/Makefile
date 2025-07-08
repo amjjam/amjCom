@@ -2,16 +2,15 @@ ifndef prefix
   prefix=/opt/amj
 endif
 
-#ifndef asioprefix
-#  asioprefix=../include
-#endif
+ifndef asioprefix
+  asioprefix=../include
+endif
 
 #ifndef asioprefix
 #  asioprefix=/opt/asio/include
 #endif
 
-FLAGS=-Wall -g -fPIC
-#-I$(asioprefix)
+FLAGS=-Wall -g -fPIC -I$(asioprefix)
 CPPFLAGS=$(FLAGS)
 
 AMJCOM_SRC=amjCom.C amjComUDP.C amjComMQ.C amjComSHM.C amjPacket.C \
