@@ -32,8 +32,9 @@ install: libamjCom.so ../include/amjCom.H ../include/amjComUDP.H ../include/amjC
 	cp ../include/amjCom.H ../include/amjComUDP.H ../include/amjComMQ.H \
 	../include/amjComSHM.H ../include/amjPacket.H \
 	../include/amjPacketRW.H ../include/amjComASIO.H \
-	../include/amjComTCP.H \
+	../include/amjComTCP.H ../include/asio.hpp \
 	$(prefix)/include/amjCom
+	cp -r ../include/asio $(prefix)/include/amjCom
 
 uninstall:
 	- rm $(prefix)/lib/libamjCom.so
@@ -45,6 +46,8 @@ uninstall:
 	- rm $(prefix)/include/amjCom/amjPacketRW.H
 	- rm $(prefix)/include/amjCom/amjComASIO.H
 	- rm $(prefix)/include/amjCom/amjComTCP.H
+	- rm $(prefix)/include/amjCom/asio.hpp
+	- rm -r $(prefix)/include/amjCom/asio
 	- rmdir $(prefix)/lib
 	- rmdir $(prefix)/include/amjCom
 	- rmdir $(prefix)/include
