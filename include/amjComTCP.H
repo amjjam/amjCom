@@ -22,7 +22,7 @@ namespace amjCom{
       virtual State state()=0;
       virtual bool send1(Packet &);
       void receive1();
-      virtual void shutdown();
+      void shutdown();
       virtual void error_handler(std::string,Error,asio::error_code)=0;
     private:
       std::shared_ptr<asio::ip::tcp::socket> _socket_ptr;
@@ -112,7 +112,7 @@ namespace amjCom{
 	     std::function<void(amjCom::Client, amjCom::Status)>
 	     callback_status,
 	     IOContext iocontext_);
-      virtual ~_Client(){};
+      virtual ~_Client();
       virtual void start(){resolve();};
       virtual bool send(Packet &p){return send1(p);};
     protected:
@@ -137,6 +137,7 @@ namespace amjCom{
       void connect();
       virtual void callback_connect(asio::error_code, const asio::ip::tcp::endpoint);
       void callback_timer(asio::error_code);
+      void shutdown();
     };
 
     Client create_client(// Description of the server
