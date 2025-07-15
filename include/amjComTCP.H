@@ -7,6 +7,8 @@
 #include "amjCom.H"
 #include "amjComASIO.H"
 
+#define PACKET_MARKER 0xDEADBEEF
+
 namespace amjCom{
   namespace TCP{
     class Common{
@@ -26,7 +28,7 @@ namespace amjCom{
       virtual void error_handler(std::string,Error,asio::error_code)=0;
     private:
       std::shared_ptr<asio::ip::tcp::socket> _socket_ptr;
-      uint8_t header[4];
+      uint8_t header[8];
       Packet p;
       void send2(asio::error_code,std::size_t);
       void receive2(asio::error_code,std::size_t);

@@ -10,13 +10,16 @@ namespace amjCom{
       std::cout << "Common::send1: p.size()=" << p.size() << std::endl;
       if(state()!=Connected)
 	return false;
-      std::vector<uint8_t> d(4+p.size());
+      std::shared_ptr<std::vector<uint8_t> > d=
+	std::make_shared<std::vector<uint8_t>>(8 + p.size());
+      uint32_t marker=PACKET_MARKER;
       uint32_t s=p.size();
-      memcpy(d.data(),&s,sizeof(uint32_t));
-      memcpy(d.data()+4,p.data(),p.size());
+      memcpy(d->data(),&marker,sizeof(uint32_t));
+      memcpy(d->data()+sizeof(uint32_t),&s,sizeof(uint32_t));
+      memcpy(d->data()+2*sizeof(uint32_t),p.data(),p.size());
       auto self=getself();
-      asio::async_write(socket(),asio::buffer(d.data(),d.size()),
-			[self](asio::error_code e, std::size_t s)
+      asio::async_write(socket(),asio::buffer(*d)/*d.data(),d.size())*/,
+			[self,d](asio::error_code e, std::size_t s)
 			{self->send2(e,s);});
       return true;
     }
@@ -34,7 +37,7 @@ namespace amjCom{
       //std::shared_ptr<Common> self=getself();
 
       std::weak_ptr<Common> weak = getself();
-      asio::async_read(socket(), asio::buffer(header, 4),
+      asio::async_read(socket(), asio::buffer(header, 8),
 		       [weak](asio::error_code e, std::size_t s) {
 			 std::shared_ptr<Common> self = weak.lock();
 			 if (!self) {
@@ -54,14 +57,21 @@ namespace amjCom{
     void Common::receive2(asio::error_code error, std::size_t nh){
       /* read header callback */
       std::cout << "Common::receive2: nh=" << nh << std::endl;
-      if(error||nh!=4){
+      if(error||nh!=8){
 	error_handler("receive2: error: n="+std::to_string(nh)+": ",
 		      ReceiveError,error);
 	return;
       }
-      uint32_t nb;
-      memcpy(&nb,header,sizeof(uint32_t));
+      uint32_t marker,nb;
+      memcpy(&marker,header,sizeof(uint32_t));
+      memcpy(&nb,header+sizeof(uint32_t),sizeof(uint32_t));
 
+      if(marker!=PACKET_MARKER){
+	printf("Common::receive2: invalid packet marker: %08x\n",marker);
+	error_handler("Invalid packet marker", ReceiveError, asio::error_code());
+	return;
+      }
+      
       /* asynchronous read body */
       p.clear();
 
