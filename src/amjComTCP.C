@@ -21,29 +21,15 @@ namespace amjCom{
       enqueue_write(data);
       return true;
     }
-    
-    // bool Common::send1(Packet &p){
-    //   std::cout << "Common::send1: p.size()=" << p.size() << std::endl;
-    //   if(state()!=Connected)
-    // 	return false;
-    //   std::shared_ptr<std::vector<uint8_t> > d=
-    // 	std::make_shared<std::vector<uint8_t>>(8 + p.size());
-    //   uint32_t marker=PACKET_MARKER;
-    //   uint32_t s=p.size();
-    //   memcpy(d->data(),&marker,sizeof(uint32_t));
-    //   memcpy(d->data()+sizeof(uint32_t),&s,sizeof(uint32_t));
-    //   memcpy(d->data()+2*sizeof(uint32_t),p.data(),p.size());
-    //   auto self=getself();
-    //   asio::async_write(socket(),asio::buffer(*d)/*d.data(),d.size())*/,
-    // 			[self,d](asio::error_code e, std::size_t s)
-    // 			{self->send2(e,s);});
-    //   return true;
-    // }
-    
+        
     void Common::enqueue_write(std::shared_ptr<std::vector<uint8_t>> data) {
       bool start_write = false;
       {
 	std::lock_guard<std::mutex> lock(write_mutex);
+
+	if(_drop_pending)
+	  write_queue.clear();
+	
 	write_queue.push_back(data);
 	if (!write_in_progress) {
 	  write_in_progress = true;
@@ -93,17 +79,9 @@ namespace amjCom{
     }
     
     
-    // void Common::send2(asio::error_code error, std::size_t s){
-    //   std::cout << "Common::send2: s=" << s << std::endl;
-    //   /* here is where we handle the status of a send */
-    //   if(error)
-    // 	error_handler("send2: error: ",SendError,error);
-    // }
-    
     void Common::receive1(){
       std::cout << "Common::receive1" << std::endl;
       /* asynchronous read header */
-      //std::shared_ptr<Common> self=getself();
 
       std::weak_ptr<Common> weak = getself();
       asio::async_read(socket(), asio::buffer(header, 8),
@@ -116,11 +94,6 @@ namespace amjCom{
 			 std::cout << "Common::receive1: lambda executed" << std::endl;
 			 self->receive2(e, s);
 		       });
-      // asio::async_read(socket(),asio::buffer(header,4),
-      // 		       [self](asio::error_code e, std::size_t s){
-      // 			 std::cout << "receive1: self.use_count()=" << self.use_count() << std::endl;
-      // 			 if(self.use_count()==1) return;
-      // 			 self->receive2(e,s);});
     }
     
     void Common::receive2(asio::error_code error, std::size_t nh){
@@ -157,10 +130,6 @@ namespace amjCom{
 			 self->receive3(e, s);
 		       });
       
-      // std::shared_ptr<Common> self=getself();
-      // asio::async_read(socket(),asio::buffer(p.write(nb),nb),
-      // 		       [self](asio::error_code e, std::size_t s)
-      // 		       {self->receive3(e,s);});
     }
     
     void Common::receive3(asio::error_code error, std::size_t nb){
@@ -174,7 +143,7 @@ namespace amjCom{
       /* callback to application - via derived class - with packet */
       p.begin();
       std::cout << "receive3: p.size()=" << p.size() << std::endl;
-      for(int i=0;i<25&&i<p.size();i++)
+      for(unsigned int i=0;i<25&&i<p.size();i++)
 	printf("%02x ",p.data()[i]);
       printf("\n");
       /* start next receive */
@@ -196,15 +165,6 @@ namespace amjCom{
 	}
       }
       
-      // try{
-      // 	if(socket().is_open()){
-      // 	  socket().shutdown(asio::ip::tcp::socket::shutdown_both);
-      // 	  socket().close();
-      // 	}
-      // }
-      // catch(const std::exception &e){
-      // 	std::cout << "Common::shutdown::catch" << std::endl;
-      // }
     }
     
     void _Session::start(std::function<void(amjCom::Session, Packet &)>
@@ -390,11 +350,6 @@ namespace amjCom{
 	  std::cout << "Timer callback: _Client already destroyed\n";
 	}
       });
-
-
-      // std::shared_ptr<_Client> self=
-      //	std::static_pointer_cast<_Client>(shared_from_this());
-      //timer.async_wait([self](asio::error_code e){self->callback_timer(e);});
     }
     
     void _Client::error_handler(std::string error_prefix,Error error,
@@ -419,11 +374,6 @@ namespace amjCom{
 	  std::cout << "Timer callback: _Client already destroyed\n";
 	}
       });
-      
-      
-      // std::shared_ptr<_Client> self=
-      // 	std::static_pointer_cast<_Client>(shared_from_this());
-      // timer.async_wait([self](asio::error_code e){self->callback_timer(e);});
     }
     
     void _Client::callback_timer(asio::error_code error){
@@ -448,53 +398,8 @@ namespace amjCom{
       if (ec) {
 	std::cout << "_Client::shutdown: timer.cancel error: " << ec.message() << std::endl;
       }
-     // try {
-     // 	timer.cancel();  // Only deal with timer
-     //  } catch (const std::exception &e) {
-     // 	std::cout << "Client::shutdown::timer.cancel() exception: " << e.what() << std::endl;
-     //  }
     }
     
-    // void _Client::shutdown(){
-    //   asio::error_code ec;
-      
-    //   // Cancel timer first — this prevents lingering callbacks
-    //   timer.cancel(ec);
-    //   if (ec) {
-    // 	std::cout << "shutdown: timer.cancel failed: " << ec.message() << std::endl;
-    //   }
-      
-    //   // Now handle socket shutdown
-    //   if (socket().is_open()) {
-    // 	socket().shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-    // 	if (ec) {
-    // 	  std::cout << "shutdown: socket.shutdown failed: " << ec.message() << std::endl;
-    // 	}
-	
-    // 	socket().close(ec);
-    // 	if (ec) {
-    // 	  std::cout << "shutdown: socket.close failed: " << ec.message() << std::endl;
-    // 	}
-    //   }
-      
-      
-    //   // try {
-    //   // 	timer.cancel();  // Cancel timer to ensure lambda doesn't hold `this`
-    //   // } catch (const std::exception &e) {
-    //   // 	std::cout << "Client::shutdown::timer.cancel() exception: "
-    //   // 		  << e.what() << std::endl;
-    //   // }
-      
-    //   // try{
-    //   // 	if(socket().is_open()){
-    //   // 	  socket().shutdown(asio::ip::tcp::socket::shutdown_both);
-    //   // 	  socket().close();
-    //   // 	}
-    //   // }
-    //   // catch(const std::exception &e){
-    //   // 	std::cout << "Common::shutdown::catch" << std::endl;
-    //   // }
-    // }
 
     Client create_client(const std::string &server,
 			 std::function<void(amjCom::Client, Packet &)>

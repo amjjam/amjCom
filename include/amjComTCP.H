@@ -18,6 +18,7 @@ namespace amjCom{
 	iocontext(iocontext),
 	_socket_ptr(new asio::ip::tcp::socket(iocontext.io_context())){};
       asio::ip::tcp::socket &socket(){return *_socket_ptr;};
+      void drop_pending(bool p){_drop_pending=p;};
       ~Common();
     protected:
       IOContext iocontext;
@@ -34,6 +35,7 @@ namespace amjCom{
       std::deque<std::shared_ptr<std::vector<uint8_t>>> write_queue;
       bool write_in_progress = false;
       std::mutex write_mutex;
+      bool _drop_pending = false;
       void enqueue_write(std::shared_ptr<std::vector<uint8_t>> data);
       void do_write();
       void handle_write(asio::error_code ec, std::size_t);
