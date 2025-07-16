@@ -3,6 +3,7 @@
 
 #include <system_error>
 #include <memory>
+#include <deque>
 
 #include "amjCom.H"
 #include "amjComASIO.H"
@@ -30,7 +31,13 @@ namespace amjCom{
       std::shared_ptr<asio::ip::tcp::socket> _socket_ptr;
       uint8_t header[8];
       Packet p;
-      void send2(asio::error_code,std::size_t);
+      std::deque<std::shared_ptr<std::vector<uint8_t>>> write_queue;
+      bool write_in_progress = false;
+      std::mutex write_mutex;
+      void enqueue_write(std::shared_ptr<std::vector<uint8_t>> data);
+      void do_write();
+      void handle_write(asio::error_code ec, std::size_t);
+      //void send2(asio::error_code,std::size_t);
       void receive2(asio::error_code,std::size_t);
       void receive3(asio::error_code,std::size_t);
       // receive4 is defined in Session and Client to call

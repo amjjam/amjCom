@@ -6,30 +6,99 @@ namespace amjCom{
       shutdown();
     }
     
-    bool Common::send1(Packet &p){
-      std::cout << "Common::send1: p.size()=" << p.size() << std::endl;
-      if(state()!=Connected)
+    bool Common::send1(Packet &p) {
+      if (state() != Connected)
 	return false;
-      std::shared_ptr<std::vector<uint8_t> > d=
-	std::make_shared<std::vector<uint8_t>>(8 + p.size());
-      uint32_t marker=PACKET_MARKER;
-      uint32_t s=p.size();
-      memcpy(d->data(),&marker,sizeof(uint32_t));
-      memcpy(d->data()+sizeof(uint32_t),&s,sizeof(uint32_t));
-      memcpy(d->data()+2*sizeof(uint32_t),p.data(),p.size());
-      auto self=getself();
-      asio::async_write(socket(),asio::buffer(*d)/*d.data(),d.size())*/,
-			[self,d](asio::error_code e, std::size_t s)
-			{self->send2(e,s);});
+      
+      auto data = std::make_shared<std::vector<uint8_t>>(8 + p.size());
+      
+      uint32_t marker = PACKET_MARKER;
+      uint32_t len = p.size();
+      memcpy(data->data(), &marker, 4);
+      memcpy(data->data() + 4, &len, 4);
+      memcpy(data->data() + 8, p.data(), len);
+      
+      enqueue_write(data);
       return true;
     }
     
-    void Common::send2(asio::error_code error, std::size_t s){
-      std::cout << "Common::send2: s=" << s << std::endl;
-      /* here is where we handle the status of a send */
-      if(error)
-	error_handler("send2: error: ",SendError,error);
+    // bool Common::send1(Packet &p){
+    //   std::cout << "Common::send1: p.size()=" << p.size() << std::endl;
+    //   if(state()!=Connected)
+    // 	return false;
+    //   std::shared_ptr<std::vector<uint8_t> > d=
+    // 	std::make_shared<std::vector<uint8_t>>(8 + p.size());
+    //   uint32_t marker=PACKET_MARKER;
+    //   uint32_t s=p.size();
+    //   memcpy(d->data(),&marker,sizeof(uint32_t));
+    //   memcpy(d->data()+sizeof(uint32_t),&s,sizeof(uint32_t));
+    //   memcpy(d->data()+2*sizeof(uint32_t),p.data(),p.size());
+    //   auto self=getself();
+    //   asio::async_write(socket(),asio::buffer(*d)/*d.data(),d.size())*/,
+    // 			[self,d](asio::error_code e, std::size_t s)
+    // 			{self->send2(e,s);});
+    //   return true;
+    // }
+    
+    void Common::enqueue_write(std::shared_ptr<std::vector<uint8_t>> data) {
+      bool start_write = false;
+      {
+	std::lock_guard<std::mutex> lock(write_mutex);
+	write_queue.push_back(data);
+	if (!write_in_progress) {
+	  write_in_progress = true;
+	  start_write = true;
+	}
+      }
+      
+      if (start_write) {
+	do_write();
+      }
     }
+    
+    void Common::do_write() {
+      std::shared_ptr<std::vector<uint8_t>> data;
+      {
+	std::lock_guard<std::mutex> lock(write_mutex);
+	data = write_queue.front();
+      }
+      
+      auto self = getself();
+      asio::async_write(socket(), asio::buffer(*data),
+			[self, data](asio::error_code ec, std::size_t bytes_transferred) {
+			  self->handle_write(ec, bytes_transferred);
+			});
+    }
+    
+    void Common::handle_write(asio::error_code ec, std::size_t) {
+      bool more_to_write = false;
+      
+      {
+	std::lock_guard<std::mutex> lock(write_mutex);
+	write_queue.pop_front();
+	more_to_write = !write_queue.empty();
+	if (!more_to_write) {
+	  write_in_progress = false;
+	}
+      }
+      
+      if (ec) {
+	error_handler("handle_write: ", SendError, ec);
+	return;
+      }
+      
+      if (more_to_write) {
+	do_write();
+      }
+    }
+    
+    
+    // void Common::send2(asio::error_code error, std::size_t s){
+    //   std::cout << "Common::send2: s=" << s << std::endl;
+    //   /* here is where we handle the status of a send */
+    //   if(error)
+    // 	error_handler("send2: error: ",SendError,error);
+    // }
     
     void Common::receive1(){
       std::cout << "Common::receive1" << std::endl;
