@@ -60,6 +60,7 @@ namespace amjCom{
 			 std::function<void(amjCom::Session, Status)>
 			 callback_status);
       virtual bool send(Packet &p){return send1(p);};
+      virtual void drop_pending(bool p) override {Common::drop_pending(p);}
     protected:
       std::shared_ptr<Common> getself(){
 	return std::dynamic_pointer_cast<Common>(shared_from_this());
@@ -126,6 +127,7 @@ namespace amjCom{
       virtual ~_Client();
       virtual void start(){resolve();};
       virtual bool send(Packet &p){return send1(p);};
+      virtual void drop_pending(bool p) override {Common::drop_pending(p);}
     protected:
       std::shared_ptr<Common> getself(){
 	return std::static_pointer_cast<Common>(shared_from_this());

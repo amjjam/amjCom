@@ -98,6 +98,7 @@ namespace amjCom{
     Status status() const {return _status;}
     // returns false if not connected in a state that allows sending
     virtual bool send(Packet &)=0;
+    virtual void drop_pending(bool){}
   protected:
     Status _status;
     virtual void status(Status s){_status=s;}
