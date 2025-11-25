@@ -84,6 +84,9 @@ namespace amjCom{
     uint8_t *data(){return _data.data();};
     uint8_t *write(size_t n);
     uint8_t *read(size_t n);
+    Packet & write(const void *d, size_t n){memcpy(write(n),d,n);
+      return *this;};
+    Packet & read(void *d, size_t n){memcpy(d,read(n),n); return *this;};
   private:
     size_t p;
     std::vector<uint8_t> _data;
