@@ -174,7 +174,7 @@ namespace amjCom{
       std::cout << "_Session::start" << std::endl;
       callback_receive=_callback_receive;
       callback_status=_callback_status;
-      status(Status(Connected));
+      status(/*shared_from_this(),*/Status(Connected));
       receive1();
     }
     
@@ -182,7 +182,7 @@ namespace amjCom{
 				 asio::error_code asio_error){
       std::cout << "_Session::error_handler: asio::error_code version" << std::endl;
       shutdown();
-      status(Status(Disconnected,error,error_prefix+asio_error.message()));
+      status(/*shared_from_this(),*/Status(Disconnected,error,error_prefix+asio_error.message()));
     }
     
     std::shared_ptr<_Server> _Server::create
@@ -284,7 +284,7 @@ namespace amjCom{
 	 connect(). Later I will make this the initiation of a
 	 async_resolve, which will call callback_resolve when
 	 complete, and from there connect() will be called */
-      status(Status(Resolving));
+      status(shared_from_this(),Status(Resolving));
       try{
 	endpoints=resolver.resolve(split1(server),split2(server));
       }
@@ -303,7 +303,7 @@ namespace amjCom{
       std::cout << "_Client::connect" << std::endl;
       /* asynchronous connect */
       
-      status(Status(Connecting));
+      status(shared_from_this(),Status(Connecting));
       std::shared_ptr<_Client> self=
 	std::static_pointer_cast<_Client>(shared_from_this());
       asio::async_connect
@@ -323,7 +323,7 @@ namespace amjCom{
       }
       
       std::cout << "_Client::callback_connect: starting receive1" << std::endl;
-      status(Status(Connected));
+      status(shared_from_this(),Status(Connected));
       receive1();
     }    
     
@@ -333,7 +333,8 @@ namespace amjCom{
       shutdown();
       
       /* report status to application */
-      status(Status(WaitingToConnect,error,error_prefix+"error code: "+
+      std::cout << "********** calling status *******" << std::endl;
+      status(shared_from_this(),Status(WaitingToConnect,error,error_prefix+"error code: "+
                     std::to_string(system_error.code().value())+" "
 		    +system_error.what()));
 
@@ -358,7 +359,7 @@ namespace amjCom{
       shutdown();
       
       /* report status to application */
-      status(Status(WaitingToConnect,error,error_prefix+asio_error.message()));
+      status(shared_from_this(),Status(WaitingToConnect,error,error_prefix+asio_error.message()));
       
       std::cout << "Client::error_handler: starting timer" << std::endl;
       
@@ -384,7 +385,7 @@ namespace amjCom{
 	sleep(1); // This blocks the thread, but there isn't much else
 		  // to do when the timer fails.
 	error_handler("Client::callback_timer: error: ",ConnectError,error);
-	status(Status(WaitingToConnect,ConnectError,
+	status(shared_from_this(),Status(WaitingToConnect,ConnectError,
 		      "connect: wait timer: error: "+error.message()));
 	return;
       }
