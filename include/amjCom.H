@@ -1,3 +1,12 @@
+/*****************************
+  For debuging set environment variable AMJCOM_DEBUG:
+  export AMJCOM_DEBUG=X
+  where X is:
+  0 for no printouts
+  1 for error messages
+  2 for error and informational messages
+****************************/
+
 #ifndef _AMJCOM_H_
 #define _AMJCOM_H_
 
@@ -7,6 +16,8 @@
 
 #include "amjPacket.H"
 
+  #include <iostream>
+  
 class amjComEndpoint{
 public:
   amjComEndpoint(){};
@@ -105,6 +116,7 @@ namespace amjCom{
   protected:
     Status _status;
     virtual void status(Status s){_status=s;}
+    int _debug;
   };
   
   /********** Session ********************************************************/
@@ -156,7 +168,7 @@ namespace amjCom{
   using Server=std::shared_ptr<_Server>;
   
   /********** Client *********************************************************/
-  
+
   class _Client: public Endpoint{
   public:
     _Client(){};
@@ -172,6 +184,7 @@ namespace amjCom{
     using Endpoint::status;
   protected:
     void status(std::shared_ptr<_Client> c, Status s){
+      std::cout << "********* status called *********" << std::endl;
       Endpoint::status(s);
       callback_status(c,_status);
     };
