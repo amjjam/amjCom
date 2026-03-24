@@ -55,10 +55,10 @@ namespace amjCom{
   enum Error {NoError=0,ConnectError=1,PeerError=2,SendError=3,ReceiveError=4,
 	      PacketError=5};
   
-  static std::vector<std::string> statedescriptions=
+  inline static const std::vector<std::string> statedescriptions=
     {"NoState","WaitingToConnect","Resolving","Connecting","Connected",
      "Disconnecting","Disconnected"};
-  static std::vector<std::string> errordescriptions=
+  inline static const std::vector<std::string> errordescriptions=
     {"None","ConnectError","PeerError","SendError","ReceiveError",
      "PacketError"};
   
@@ -67,13 +67,13 @@ namespace amjCom{
     Status(State state=NoState, Error error=NoError,
 	   std::string errormessage=""):
       _state(state),_error(error),_errormessage(errormessage){};
-    virtual ~Status(){};
-    explicit operator bool(){if(_state==Connected) return true; return false;};
+    ~Status(){};
+    explicit operator bool() const {if(_state==Connected) return true; return false;};
     State state() const {return _state;};
-    std::string statedescription() const {return statedescriptions[_state];};
+    const std::string &statedescription() const {return statedescriptions[_state];};
     Error error() const {return _error;};
-    void errormessage(std::string e){_errormessage=e;};
-    std::string errormessage() const {return _errormessage;};
+    void errormessage(const std::string e){_errormessage=e;};
+    const std::string &errormessage() const {return _errormessage;};
   private:
     State _state;
     Error _error;
