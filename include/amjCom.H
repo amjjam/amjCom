@@ -186,7 +186,7 @@ namespace amjCom{
     void status(std::shared_ptr<_Client> c, Status s){
       std::cout << "********* status called *********" << std::endl;
       Endpoint::status(s);
-      callback_status(c,_status);
+      callback_status(c,s);
     };
     std::function<void(std::shared_ptr<_Client>, Packet &)> callback_receive;
     std::function<void(std::shared_ptr<_Client>, Status)> callback_status;
